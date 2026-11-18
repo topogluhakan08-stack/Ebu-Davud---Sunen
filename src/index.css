@@ -1,0 +1,217 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* 60% Dominant Warm Cream / Parchment Canvas */
+  --bg-canvas: #f7f3ea;
+  --bg-card: #fbf9f4;
+  --bg-surface: #efe9db;
+  --bg-surface-hover: #e7decb;
+  --border-hairline: #dfd6c3;
+  --border-strong: #c9bca2;
+
+  /* Ink & Hierarchy */
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #78716c;
+
+  /* 10% Scholarly Accents */
+  --accent-navy: #14284b;
+  --accent-navy-hover: #1d396b;
+  --accent-navy-soft: #e6ebf3;
+  --accent-emerald: #0f5132;
+  --accent-emerald-soft: #e6f2ec;
+  --accent-gold: #b8862d;
+  --accent-gold-soft: #f6eedc;
+
+  /* Semantic Status */
+  --status-review-bg: #fef3c7;
+  --status-review-text: #92400e;
+  --status-review-border: #f59e0b;
+
+  /* Typography & Accessibility Scaling */
+  --app-font-scale: 1;
+  --arabic-font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-arabic: "Amiri", "Noto Naskh Arabic", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.dark {
+  --bg-canvas: #10151e;
+  --bg-card: #171e2b;
+  --bg-surface: #1f2838;
+  --bg-surface-hover: #283347;
+  --border-hairline: #2c374c;
+  --border-strong: #3e4c66;
+
+  --text-primary: #efeae0;
+  --text-secondary: #c4bdb0;
+  --text-muted: #989184;
+
+  --accent-navy: #3b67b0;
+  --accent-navy-hover: #4e7bc4;
+  --accent-navy-soft: #1a2842;
+  --accent-emerald: #2d9f6b;
+  --accent-emerald-soft: #132e22;
+  --accent-gold: #d9ad5b;
+  --accent-gold-soft: #2e2414;
+
+  --status-review-bg: #3b2a09;
+  --status-review-text: #fcd34d;
+  --status-review-border: #d97706;
+}
+
+.high-contrast {
+  --bg-canvas: #ffffff;
+  --bg-card: #ffffff;
+  --bg-surface: #f0f0f0;
+  --border-hairline: #525252;
+  --border-strong: #171717;
+  --text-primary: #000000;
+  --text-secondary: #171717;
+  --text-muted: #262626;
+  --accent-navy: #0a1b3d;
+  --accent-emerald: #064024;
+  --accent-gold: #8a5b00;
+}
+
+.dark.high-contrast {
+  --bg-canvas: #000000;
+  --bg-card: #0a0a0a;
+  --bg-surface: #171717;
+  --border-hairline: #a3a3a3;
+  --border-strong: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #f5f5f5;
+  --text-muted: #e5e5e5;
+  --accent-navy: #7daeff;
+  --accent-emerald: #5eead4;
+  --accent-gold: #fcd34d;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: calc(16px * var(--app-font-scale));
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .dark body {
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3, .font-editorial {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 2px;
+  }
+}
+
+.font-arabic {
+  font-family: var(--font-arabic);
+  font-size: calc(var(--arabic-font-size) * var(--app-font-scale));
+  line-height: 2.15;
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+
+.font-arabic-inline {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  unicode-bidi: isolate;
+}
+
+.font-editorial {
+  font-family: var(--font-display);
+}
+
+.font-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Safe area bottom padding for mobile thumb-zone bar */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* CSS-driven Bab & root highlight theming (always synchronized with .dark) */
+.bab-themed-vars {
+  --bab-accent: var(--bab-accent-light, var(--accent-navy));
+}
+.dark .bab-themed-vars {
+  --bab-accent: var(--bab-accent-dark, var(--accent-navy));
+}
+
+.bab-themed-surface {
+  --bab-accent: var(--bab-accent-light, var(--accent-navy));
+  background-color: var(--bab-bg-light, var(--bg-card));
+  border-color: var(--bab-accent-light, var(--border-hairline));
+}
+.dark .bab-themed-surface {
+  --bab-accent: var(--bab-accent-dark, var(--accent-navy));
+  background-color: var(--bab-bg-dark, var(--bg-card));
+  border-color: var(--bab-accent-dark, var(--border-hairline));
+}
+
+.bab-themed-badge {
+  background-color: var(--bab-bg-light, var(--bg-surface));
+  color: var(--bab-accent-light, var(--text-primary));
+}
+.dark .bab-themed-badge {
+  background-color: var(--bab-bg-dark, var(--bg-surface));
+  color: var(--bab-accent-dark, var(--text-primary));
+}
+
+.root-hl-token {
+  background-color: var(--hl-bg-light);
+  border-color: var(--hl-border-light);
+  color: var(--hl-text-light);
+}
+.dark .root-hl-token {
+  background-color: var(--hl-bg-dark);
+  border-color: var(--hl-border-dark);
+  color: var(--hl-text-dark);
+}
+
+.root-hl-border {
+  border-color: var(--hl-border-light);
+}
+.dark .root-hl-border {
+  border-color: var(--hl-border-dark);
+}

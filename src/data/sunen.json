@@ -1,0 +1,603 @@
+{
+  "meta": {
+    "titleTr": "es-SÜNEN",
+    "titleAr": "السُّنَن",
+    "subtitleTr": "Ebû Dâvûd es-Sicistânî’nin (ö. 275/889) Kütüb-i Sitte’ye dahil olan eseri.",
+    "author": "M. Yaşar Kandemir",
+    "sourceNote": "Bu madde TDV İslâm Ansiklopedisi’nin 2010 yılında İstanbul’da basılan 38. cildinde, 145-147 numaralı sayfalarda yer almıştır.",
+    "sourceUrl": "https://islamansiklopedisi.org.tr/es-sunen--ebu-davud"
+  },
+  "compilationAndPurpose": {
+    "summaryTr": "Ebû Dâvûd, rivayete göre hayatı boyunca yazdığı 500.000 hadis arasından senedinde kopukluk bulunmayan ve râvilerinin zayıflığı hakkında görüş birliğine varılmayan ahkâma dair 4800’ünü seçerek eserini meydana getirmiş ve hocası Ahmed b. Hanbel’e sunarak onun takdirini kazanmıştır (Hatîb, IX, 56). Müellif, eserine kaydettiği hadislerin sahih olmasına dikkat etmekle birlikte sahih hadis bulamadığı konularda Hz. Peygamber’e ﷺ aidiyeti muhtemel olan zayıf hadis almakta sakınca görmemiş ve bu tür rivayetleri fakihlerin kıyasına tercih etmiştir.",
+    "ahmedBinHanbelNote": "Eserini hocası Ahmed b. Hanbel’e sunarak onun takdirini kazanmıştır (Hatîb, IX, 56).",
+    "hadithTotals": {
+      "totalWritten": 500000,
+      "selectedInSunen": 4800,
+      "murselApprox": 600,
+      "elMerasilApprox": 600
+    },
+    "mekkeLetter": {
+      "title": "Risâle ilâ ehli Mekke fî vaṣfi Sünenih",
+      "altTitle": "Risâletü Ebî Dâvûd ilâ ehli Mekke fî vaṣfi Sünenih",
+      "editor": "Muhammed Lutfî es-Sabbâğ",
+      "publication": "Beyrut 1394",
+      "introTr": "Kendisinden es-Sünen’in mahiyetini öğrenmek isteyen Mekkeliler’e yazdığı mektupta eserinin altı temel telif ilkesini bizzat anlatmıştır:",
+      "principles": [
+        {
+          "order": 1,
+          "titleTr": "Bildiği En Sahih Hadisleri Toplaması",
+          "detailTr": "Ebû Dâvûd es-Sünen’de bildiği hadislerin en sahihlerini bir araya getirmiştir."
+        },
+        {
+          "order": 2,
+          "titleTr": "İsnad Gücüne Karşı Hıfzı Güçlü Râviyi Tercihi",
+          "detailTr": "İki ayrı sahih senedle rivayet edilen hadislerden birinin isnadı daha kuvvetli, diğerinin râvisi hıfz yönünden daha güçlü olduğunda çoğu zaman hıfzı kuvvetli olanı tercih etmiştir."
+        },
+        {
+          "order": 3,
+          "titleTr": "Her Babda Yalnız 1 veya 2 Hadis Alması",
+          "detailTr": "Bir babda birçok sahih hadis bulunsa bile o baba sadece bir veya iki hadis almıştır."
+        },
+        {
+          "order": 4,
+          "titleTr": "Ek Bilgi İçeren Farklı Senedleri Zikretmesi",
+          "detailTr": "Bir hadisin farklı rivayetlerinde önemli bilgiler varsa o rivayetleri farklı senedlerle zikretmiştir."
+        },
+        {
+          "order": 5,
+          "titleTr": "Hadisleri Kısaltıp Konuyla İlgili Kısmı Yazması",
+          "detailTr": "Hadisleri genellikle kısaltmış ve uzun hadislerin sadece babdaki konuyla ilgili kısmını yazmıştır."
+        },
+        {
+          "order": 6,
+          "titleTr": "Terkinde İttifak Edilen Râvileri Dışarıda Bırakması",
+          "detailTr": "Muhaddislerin terkinde ittifak ettiği râvilerin rivayetlerine eserinde yer vermemiştir."
+        }
+      ]
+    },
+    "specialNotes": {
+      "sufficeWithSunenTr": "Hadisleri titiz bir çalışmayla derleyen Ebû Dâvûd, sahih isnadla rivayet edilen her rivayeti eserine aldığı kanaatiyle Resûlullah’ın ﷺ sünneti konusunda sadece bu eserle yetinilebileceğini belirtmiştir.",
+      "munkerAndSilenceRuleTr": "Bir konuda müsned rivayet bulunmadığı için münker veya çok zayıf rivayetleri eserine alma gereğini duyduğunda bu duruma işaret etmiş, üzerinde herhangi bir değerlendirme yapmadığı rivayetlerin delil olarak kullanılabileceğini söylemiştir.",
+      "ahkamScopeTr": "es-Sünen’e yalnız ahkâm hadislerini alıp zühde ve faziletli amellere dair rivayetlere yer vermediğini, kitabındaki 4800 hadisten 600 kadarının mürsel olduğunu ifade etmiştir.",
+      "elMerasilConnectionTr": "Ebû Dâvûd’un el-Merâsîl adlı eserindeki rivayetlerin 600’e yakın olması, ayrıca el-Merâsîl’in es-Sünen’in bazı nüshalarının sonunda bulunması ve bazı nüshalardaki kayıt, el-Merâsîl’in es-Sünen’in tekmilesi olduğunu göstermektedir (bk. el-MERÂSÎL).",
+      "kopruluManuscriptRef": "Köprülü Ktp., nr. 363",
+      "colophonQuote": "Hâzâ âhirü’l-merâsîl min Kitâbi’s-Sünen"
+    }
+  },
+  "authenticityAndStructure": {
+    "tiersSummaryTr": "es-Sünen’deki rivayetlerin sıhhat yapısı, Buhârî ve Müslim ile ortak sahih rivayetlerden ceyyid, sâlih ve leyyin derecelerine ve zayıflığı açıklanan çok zayıf rivayetlere kadar beş ana katmandan oluşur.",
+    "tiers": [
+      {
+        "id": "buhari-muslim",
+        "labelTr": "Buhârî ve/veya Müslim Rivayetleri (Yarısından Fazlası)",
+        "detailTr": "es-Sünen’deki rivayetlerin yarısından fazlası hem Buhârî hem Müslim’in veya sadece bunlardan birinin rivayet ettiği hadislerden meydana gelir.",
+        "shareNote": "%50+"
+      },
+      {
+        "id": "ceyyid-salih",
+        "labelTr": "Ceyyid ve İsnadı Sâlih Hadisler",
+        "detailTr": "Ceyyid kabul edilen ve isnadı sâlih olan hadisleri kapsar.",
+        "shareNote": "Güçlü"
+      },
+      {
+        "id": "leyyin-coklu",
+        "labelTr": "İki veya Daha Fazla Leyyin Tarikle Makbul Olanlar",
+        "detailTr": "İki veya daha fazla leyyin tarikten geldiği için makbul sayılan hadisler yer alır.",
+        "shareNote": "Mütabaatlı"
+      },
+      {
+        "id": "hafiza-zayifi",
+        "labelTr": "Râvisinin Hâfıza Zayıflığı Yüzünden İsnadı Zayıf Olanlar",
+        "detailTr": "Ebû Dâvûd bu tür hadisler hakkında genellikle bir değerlendirme yapmaz.",
+        "shareNote": "Sükûtî"
+      },
+      {
+        "id": "cok-zayif",
+        "labelTr": "Râvisi Çok Zayıf Olan Hadisler",
+        "detailTr": "İsnadı zayıf sayılan ve râvisinin zayıf olduğu açıkça görülen hadisleri eserine almakta sakınca görmeyen Ebû Dâvûd bu tür hadislerin zayıflığını genellikle açıklamıştır.",
+        "shareNote": "Müellif açıklamalı"
+      }
+    ],
+    "reyAndKiyasPreferenceTr": "Onun asıl amacı fakihlerin delil olarak kullandığı ahkâm hadislerini bir araya getirmektir. Aşırı derecede zayıf sayılmayan rivayetleri re’y ve kıyasa tercih ettiği için bu tür hadislerin kabulünde farklı bir ölçü uygulamıştır.",
+    "generalGradingAndRankTr": "es-Sünen’deki rivayetler genellikle hasen kabul edilmiş, ahkâm hadislerinin başarıyla derlendiği eser Kütüb-i Sitte’nin üçüncü kitabı kabul edilmiştir.",
+    "kutubSitteCitation": "M. Reşâd Halîfe, s. 162",
+    "babNamingQuirkTr": "“Kitâbü’l-Luḳaṭa” ve “Kitâbü’l-Mehdî”de olduğu gibi bazı bablarda isim görülmemekte, bazı bablarda ise bir başlık açılmakla birlikte bab adı zikredilmemektedir.",
+    "rawis": [
+      {
+        "id": "lului",
+        "nameTr": "Ebû Ali Muhammed b. Ahmed b. Amr el-Lü’lüî",
+        "shortName": "el-Lü’lüî",
+        "roleTr": "20 Yıl Boyunca Birkaç Defa ve Vefatından Önce Dinleyen Râvi",
+        "detailTr": "es-Sünen’i Ebû Dâvûd’dan rivayet eden talebelerinden biri olup onu hocasından yirmi yıl boyunca birkaç defa ve Ebû Dâvûd’un vefatından önce dinlemiştir.",
+        "citation": "Zehebî, XV, 307"
+      },
+      {
+        "id": "ibn-dase",
+        "nameTr": "Ebû Bekir Muhammed b. Bekir b. Muhammed el-Basrî (İbn Dâse)",
+        "shortName": "İbn Dâse",
+        "roleTr": "Eseri Son Şekliyle Tam Olarak Dinleyen Râvi",
+        "detailTr": "İbn Dâse diye anılan diğer talebesi olup eseri hocasından son şekliyle tam olarak dinleyen râvi olarak bilinmektedir.",
+        "citation": "Zehebî, XV, 538"
+      },
+      {
+        "id": "ibnul-arabi",
+        "nameTr": "Ebû Saîd İbnü’l-A‘râbî",
+        "shortName": "İbnü’l-A‘râbî",
+        "roleTr": "Sûfî Muhaddis Râvi",
+        "detailTr": "es-Sünen’in tanınmış râvileri arasında yer alan meşhur sûfî muhaddistir.",
+        "citation": "TDV İA, 38/145"
+      }
+    ]
+  },
+  "editionStats": [
+    {
+      "id": "wensinck",
+      "editionName": "Wensinck (el-Muʿcemü’l-müfehres)",
+      "books": 40,
+      "babs": 1889,
+      "hadiths": 4800,
+      "murselNote": "4800 hadisten ~600 kadarı mürsel",
+      "yearText": "Klasik Fihrist",
+      "detailsTr": "Wensinck’in el-Muʿcemü’l-müfehres’teki sayımına göre es-Sünen’de kırk kitap, 1889 bab ve 4800 hadis bulunmaktadır."
+    },
+    {
+      "id": "abdulhamid",
+      "editionName": "Muhammed Muhyiddin Abdülhamîd Neşri",
+      "books": 35,
+      "babs": 1871,
+      "hadiths": 5274,
+      "yearText": "1348 / 1354 / 1369 (1950)",
+      "detailsTr": "Muhammed Muhyiddin Abdülhamîd neşrinde (I-IV, Kahire) otuz beş kitap, 1871 bab ve 5274 hadis bulunmaktadır."
+    },
+    {
+      "id": "avvame",
+      "editionName": "Muhammed Avvâme Neşri",
+      "books": 36,
+      "babs": 1850,
+      "hadiths": 5232,
+      "yearText": "1419/1998",
+      "detailsTr": "İbn Hacer el-Askalânî nüshasını esas alan Muhammed Avvâme neşrinde (I-V, Beyrut) otuz altı kitap, 1850 bab ve 5232 hadis bulunmaktadır."
+    },
+    {
+      "id": "liechtenstein",
+      "editionName": "Cem‘iyyetü’l-merkezi’l-İslâmî Neşri",
+      "books": 42,
+      "babs": 1885,
+      "hadiths": 5276,
+      "yearText": "1421/2000",
+      "detailsTr": "Cem‘iyyetü’l-merkezi’l-İslâmî (I-II, Liechtenstein 1421/2000) eserin kırk iki kitap, 1885 bab ve 5276 hadisten meydana gelen bir neşrini gerçekleştirmiştir."
+    }
+  ],
+  "printCities": [
+    {
+      "id": "leknev",
+      "order": 1,
+      "cityTr": "Leknev",
+      "cityAr": "لكنو",
+      "countryTr": "Hindistan",
+      "editions": [
+        "1840 baskısı",
+        "1877 baskısı",
+        "1305 baskısı",
+        "I-II, 1318 (Ebü’l-Hasenât Muhammed el-Fencânî’nin şerhiyle birlikte)"
+      ],
+      "highlightTr": "es-Sünen’in XIX. yüzyıldaki ilk matbu baskılarına ve Fencânî şerhli neşrine ev sahipliği yapmıştır.",
+      "lat": 26.8467,
+      "lng": 80.9462,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "delhi",
+      "order": 2,
+      "cityTr": "Delhi",
+      "cityAr": "دهلي",
+      "countryTr": "Hindistan",
+      "editions": [
+        "1271-1272 (I-II)",
+        "1283 (bazı açıklamalarla birlikte)",
+        "1890 (bazı açıklamalarla birlikte)"
+      ],
+      "highlightTr": "Hint alt kıtasında açıklamalı erken dönem taşbaskı ve matbu es-Sünen neşirlerinin merkezidir.",
+      "lat": 28.6139,
+      "lng": 77.209,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "kahire",
+      "order": 3,
+      "cityTr": "Kahire",
+      "cityAr": "القاهرة",
+      "countryTr": "Mısır",
+      "editions": [
+        "I-II, 1279-1280 (Ṣaḥîḥu Süneni’l-Muṣṭafâ adıyla)",
+        "1292 baskısı",
+        "1310 (Muhammed b. Abdülbâkī ez-Zürkānî’nin Şerḥu’l-Muvaṭṭaʾının kenarında)",
+        "nşr. Muhammed Muhyiddin Abdülhamîd (I-IV, 1348, 1354, 1369/1950)",
+        "nşr. Ahmed Sa‘d Ali (I-II, 1371/1952)"
+      ],
+      "highlightTr": "Bulak/Kahire baskıları ve M. Muhyiddin Abdülhamîd’in meşhur 4 ciltlik tahkikiyle İslâm dünyasında en yaygın neşir merkezidir.",
+      "lat": 30.0444,
+      "lng": 31.2357,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "haydarabad",
+      "order": 4,
+      "cityTr": "Haydarâbâd",
+      "cityAr": "حيدرآباد",
+      "countryTr": "Hindistan",
+      "editions": [
+        "1321 baskısı"
+      ],
+      "highlightTr": "Dâiretü’l-maârif geleneğinin bulunduğu şehirde 1321 tarihinde yayımlanmıştır.",
+      "lat": 17.385,
+      "lng": 78.4867,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "beyrut",
+      "order": 5,
+      "cityTr": "Beyrut",
+      "cityAr": "بيروت",
+      "countryTr": "Lübnan",
+      "editions": [
+        "1403/1983 baskısı",
+        "nşr. Kemâl Yûsuf el-Hût (I-III, 1409/1988)",
+        "nşr. Muhammed Avvâme (I-V, 1419/1998 — İbn Hacer el-Askalânî nüshasını esas alarak)",
+        "nşr. Heysem b. Nizâr Temîm (1999)"
+      ],
+      "highlightTr": "Modern tahkikli neşirlerin (özellikle İbn Hacer nüshasını esas alan Muhammed Avvâme neşrinin) başlıca merkezidir.",
+      "lat": 33.8938,
+      "lng": 35.5018,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "humus",
+      "order": 6,
+      "cityTr": "Humus",
+      "cityAr": "حمص",
+      "countryTr": "Suriye",
+      "editions": [
+        "nşr. İzzet Ubeyd – Âdil es-Seyyid (1388/1969, 1394/1974)",
+        "nşr. Muhammed Ali es-Seyyid (I-V, 1979)"
+      ],
+      "highlightTr": "1969–1979 arasında İzzet Ubeyd, Âdil es-Seyyid ve Muhammed Ali es-Seyyid tarafından neşredilmiştir.",
+      "lat": 34.7324,
+      "lng": 36.7137,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "riyad",
+      "order": 7,
+      "cityTr": "Riyad",
+      "cityAr": "الرياض",
+      "countryTr": "Suudi Arabistan",
+      "editions": [
+        "nşr. Nâsırüddin el-Elbânî (ts.)",
+        "Mevsûʿatü’l-ḥadîs̱i’ş-şerîf el-Kütübü’s-Sitte içinde (2000, s. 1221-1626)"
+      ],
+      "highlightTr": "Elbânî neşri ve 2000 tarihli Kütüb-i Sitte külliyatı baskısının merkezidir.",
+      "lat": 24.7136,
+      "lng": 46.6753,
+      "isExtraCoordinateNote": true
+    },
+    {
+      "id": "liechtenstein",
+      "order": 8,
+      "cityTr": "Liechtenstein",
+      "cityAr": "ليختنشتاين",
+      "countryTr": "Avrupa",
+      "editions": [
+        "Cem‘iyyetü’l-merkezi’l-İslâmî (I-II, 1421/2000 — 42 kitap, 1885 bab, 5276 hadis)"
+      ],
+      "highlightTr": "Cem‘iyyetü’l-merkezi’l-İslâmî tarafından 42 kitap, 1885 bab ve 5276 hadisle neşredilmiştir.",
+      "lat": 47.141,
+      "lng": 9.5209,
+      "isExtraCoordinateNote": true
+    }
+  ],
+  "commentaries": [
+    {
+      "id": "hattabi",
+      "order": 1,
+      "author": "Hattâbî",
+      "title": "Meʿâlimü’s-Sünen",
+      "madhhabOrScope": "İlk Hadis Şerhi · Garîb Kelimeler & Fıkhî Hükümler",
+      "summaryTr": "Genellikle hadislerde geçen nâdir kelimelerin ve hadisin mânasının açıklandığı, ihtiva ettiği fıkhî sonuçların belirtildiği bir çalışma olup aynı zamanda ilk hadis şerhi olarak bilinmektedir. Nüshalarının önemli bir kısmı İstanbul’daki kütüphanelerde kayıtlıdır.",
+      "editionsOrManuscripts": [
+        "İstanbul kütüphanelerinde önemli yazma nüshaları kayıtlıdır",
+        "nşr. Muhammed Râgıb et-Tabbâh, I-IV, Halep 1339-1343, 1932-1934",
+        "nşr. İzzet Ubeyd ed-De‘‘âs – Âdil es-Seyyid, I-V, Humus 1389-1394/1969-1974",
+        "nşr. Ahmed Muhammed Şâkir – Muhammed Hâmid el-Fıkī, I-VIII, Kahire 1367-1369 (Münzirî’nin Muḫtaṣaru Süneni Ebî Dâvûd’u ve İbn Kayyim el-Cevziyye’nin Tehẕîb’iyle birlikte)"
+      ],
+      "subWorks": [
+        "İbn Hilâl el-Makdisî bu eseri ʿUcâletü’l-ʿâlim min Kitâbi’l-Meʿâlim adıyla ihtisar etmiştir (Keşfü’ẓ-ẓunûn, II, 1005)."
+      ]
+    },
+    {
+      "id": "ibnul-iraki",
+      "order": 2,
+      "author": "İbnü’l-Irâkī",
+      "title": "Şerḥu Süneni Ebî Dâvûd",
+      "madhhabOrScope": "7 Cilt · Sehiv Secdesi Bahsine Kadar",
+      "summaryTr": "Yedi cilt olmakla birlikte eserde ancak sehiv secdesi bahsine kadar olan kısım şerhedilmiştir; muhtemelen tamamlanamamış bir çalışmadır.",
+      "editionsOrManuscripts": [
+        "Süleymaniye Kütüphanesi’ndeki başı ve sonu eksik iki nüsha: Cârullah Efendi, nr. 316 (131 varak) ve nr. 318 (79 varak)"
+      ]
+    },
+    {
+      "id": "bulkini",
+      "order": 3,
+      "author": "Ömer b. Reslân el-Bulkīnî",
+      "title": "Şerḥu Süneni Ebî Dâvûd",
+      "madhhabOrScope": "5 Ciltlik Yazma Nüsha",
+      "summaryTr": "Ömer b. Reslân el-Bulkīnî’ye ait beş ciltlik şerh çalışmasıdır.",
+      "editionsOrManuscripts": [
+        "Medine Mahmûdiye Kütüphanesi, nr. 74 (5 ciltlik nüsha)"
+      ]
+    },
+    {
+      "id": "remli",
+      "order": 4,
+      "author": "Ahmed b. Hüseyin er-Remlî",
+      "title": "Şerḥu Süneni Ebî Dâvûd",
+      "madhhabOrScope": "Yazma Nüshalar · Türkiye Kütüphaneleri",
+      "summaryTr": "Ahmed b. Hüseyin er-Remlî tarafından kaleme alınan ve Türkiye kütüphanelerinde muhtelif nüshaları bulunan şerhtir.",
+      "editionsOrManuscripts": [
+        "Türkiye’deki kütüphanelerde muhtelif nüshaları bulunmaktadır (Sezgin, I, 151)"
+      ]
+    },
+    {
+      "id": "suyuti",
+      "order": 5,
+      "author": "Süyûtî",
+      "title": "Mirḳātü’ṣ-ṣuʿûd ilâ Süneni Ebî Dâvûd",
+      "madhhabOrScope": "Özlü Hâşiye/Şerh & Dimnâtî İhtisarı",
+      "summaryTr": "Süyûtî’nin es-Sünen üzerine yazdığı şerh çalışmasıdır; nüshaları için Sezgin (I, 151) kaynak gösterilmiştir.",
+      "editionsOrManuscripts": [
+        "Yazma nüshaları için bk. Sezgin, I, 151"
+      ],
+      "subWorks": [
+        "Dimnâtî, bu eseri Derecâtü Mirḳāti’ṣ-ṣuʿûd ilâ Süneni Ebî Dâvûd adıyla ihtisar etmiştir (Kahire 1298)."
+      ]
+    },
+    {
+      "id": "azimabadi",
+      "order": 6,
+      "author": "Azîmâbâdî",
+      "title": "ʿAvnü’l-maʿbûd",
+      "madhhabOrScope": "Hindistan Ekolü · 11 Nüsha Esaslı",
+      "summaryTr": "Hindistanlı hadis ve fıkıh âlimi Azîmâbâdî, es-Sünen’i oldukça geniş şerhetmek amacıyla Ġāyetü’l-maḳṣûd adlı bir eser kaleme almaya başlamış, bitiremeyeceğini düşünerek onu ʿAvnü’l-maʿbûd adıyla ihtisar etmiştir. Bu eserin başka müelliflere ait olduğu konusundaki tereddütler yersizdir (bk. AZÎMÂBÂDÎ).",
+      "editionsOrManuscripts": [
+        "11 nüsha esas alınarak 4 cilt halinde (Delhi 1322)",
+        "4 büyük cilt halinde (Delhi 1918-1923)",
+        "nşr. Abdurrahman Muhammed Osman, 14 cilt halinde (Medine-Kahire 1388-1389/1968-1969)"
+      ],
+      "subWorks": [
+        "Öncüsü / geniş aslı: Ġāyetü’l-maḳṣûd"
+      ]
+    },
+    {
+      "id": "seharenpuri",
+      "order": 7,
+      "author": "Halîl Ahmed Sehârenpûrî",
+      "title": "Beẕlü’l-mechûd",
+      "madhhabOrScope": "Hanefî Mezhebi Doğrultusu · 20 Cilt",
+      "summaryTr": "Hindistanlı hadis âlimi Sehârenpûrî’nin Hanefî mezhebi görüşleri doğrultusunda kaleme aldığı, Bedreddin el-Aynî’nin ʿUmdetü’l-ḳārî ve Ali el-Kārî’nin Mirḳātü’l-mefâtîḥ’inden faydalanılarak yazılan şerhtir. Nüsha farklarına işaret etmiş, senedsiz hadislerin kaynaklarını göstermiş, râvileri değerlendirirken Ebû Dâvûd’un görüşlerine öncelik tanımıştır.",
+      "editionsOrManuscripts": [
+        "Muhammed Zekeriyyâ Kandehlevî’nin ta‘likleriyle 20 cilt (ilk 6 cilt Leknev, diğerleri Kahire 1393/1973)",
+        "nşr. Takıyyüddin en-Nedvî, I-XIV, Beyrut 2006"
+      ]
+    },
+    {
+      "id": "subki",
+      "order": 8,
+      "author": "Mahmûd Muhammed Hattâb es-Sübkî",
+      "title": "el-Menhelü’l-ʿazbü’l-mevrûd",
+      "madhhabOrScope": "Dört Mezhep Fıkhı · Tekmile ve Fihristli",
+      "summaryTr": "Dört mezhebin görüşlerine yer vererek kaleme aldığı şerhi ancak “Kitâbü’l-Ḥacc”a kadar yazabilmiştir (I-X, Kahire 1351). Oğlu Emîn Mahmûd Hattâb’ın dört ciltlik tekmilesine rağmen şerh tamamlanamamıştır.",
+      "editionsOrManuscripts": [
+        "I-X, Kahire 1351 (Kitâbü’l-Ḥacc’a kadar)"
+      ],
+      "subWorks": [
+        "Tekmile (oğlu Emîn Mahmûd Hattâb): Fetḥu’l-meliki’l-maʿbûd tekmiletü’l-Menheli’l-ʿazbi’l-mevrûd (4 cilt, Kahire 1375-1383/1955-1963 — tamamlanamamış)",
+        "Fihrist (Mustafa Ali el-Beyyûmî): Miftâḥu’l-Menheli’l-ʿazbi’l-mevrûd (Riyad 1356, 1394/1974)"
+      ]
+    },
+    {
+      "id": "sindi",
+      "order": 9,
+      "author": "Muhammed b. Abdülhâdî es-Sindî",
+      "title": "Fetḥu’l-vedûd ʿalâ Süneni Ebî Dâvûd",
+      "madhhabOrScope": "Yaygın Yazma Nüshalar",
+      "summaryTr": "Muhammed b. Abdülhâdî es-Sindî tarafından kaleme alınan ve İslâm dünyasında pek çok yazma nüshası bulunan şerhtir.",
+      "editionsOrManuscripts": [
+        "Pek çok yazma nüshası mevcuttur (Sezgin, I, 294)"
+      ]
+    }
+  ],
+  "incompleteWorks": [
+    {
+      "id": "nevevi",
+      "order": 1,
+      "author": "Nevevî",
+      "title": "el-Îcâz fî şerḥi Süneni Ebî Dâvûd",
+      "extentOrNoteTr": "“Kitâbü’l-Vuḍûʾ”un bir kısmına kadar olan hadisleri ihtiva eden yarım kalmış şerh.",
+      "manuscriptOrCitation": "Süleymaniye Kütüphanesi, Hekimoğlu Ali Paşa, nr. 200"
+    },
+    {
+      "id": "harisi-mogultay",
+      "order": 2,
+      "author": "Mes‘ûd b. Ahmed el-Hârisî & Moğultay b. Kılıç",
+      "title": "Şerḥu Süneni Ebî Dâvûd",
+      "extentOrNoteTr": "Her iki âlimin es-Sünen üzerine kaleme alıp tamamlayamadıkları yarım kalmış şerh çalışmaları.",
+      "manuscriptOrCitation": "TDV İA, 38/146"
+    },
+    {
+      "id": "makdisi",
+      "order": 3,
+      "author": "İbn Hilâl el-Makdisî",
+      "title": "İntihâʾü’s-senen ve’ktifâʾü’s-Sünen",
+      "extentOrNoteTr": "Yarım kalmış çalışmalar arasında zikredilmektedir.",
+      "manuscriptOrCitation": "Keşfü’ẓ-ẓunûn, II, 1006"
+    },
+    {
+      "id": "ayni",
+      "order": 4,
+      "author": "Bedreddin el-Aynî",
+      "title": "Şerḥu Süneni Ebî Dâvûd",
+      "extentOrNoteTr": "Müellif hattıyla olan nüshasının iki cildi günümüze ulaşmıştır.",
+      "manuscriptOrCitation": "Dârü’l-kütübi’l-Mısriyye, nr. 286 (2 cilt, müellif hattı)"
+    },
+    {
+      "id": "ibnul-mulakkin",
+      "order": 5,
+      "author": "İbnü’l-Mülakkın",
+      "title": "es-Sünen’in Ṣaḥîḥayn Üzerine Zevâidi Şerhi",
+      "extentOrNoteTr": "es-Sünen’in Buhârî ve Müslim (Ṣaḥîḥayn) üzerine olan zevâidini iki cilt halinde şerhetmiştir.",
+      "manuscriptOrCitation": "Keşfü’ẓ-ẓunûn, II, 1005"
+    }
+  ],
+  "abridgementsAndStudies": [
+    {
+      "id": "munziri-muhtasar",
+      "order": 1,
+      "kind": "ihtisar",
+      "kindLabelTr": "İhtisar",
+      "author": "Münzirî",
+      "title": "Muḫtaṣaru Süneni Ebî Dâvûd (el-Müctebâ [el-Müctenâ] mine’s-Sünen)",
+      "summaryTr": "Sünenü Ebî Dâvûd’un Lü’lüî nüshasını esas alarak yazmış, hadislerin Kütüb-i Sitte’de bulunduğu yerleri göstermiş ve rivayetlerin sağlamlık derecesini belirtmiştir.",
+      "publicationInfo": "nşr. Ahmed Muhammed Şâkir – Muhammed Hâmid el-Fıkī (Hattâbî’nin Meʿâlimü’s-Sünen ve İbn Kayyim el-Cevziyye’nin Tehẕîb’i ile birlikte, I-VIII, Kahire 1367-1369)"
+    },
+    {
+      "id": "munziri-hasiye",
+      "order": 2,
+      "kind": "hasiye_tashih",
+      "kindLabelTr": "Hâşiye & Tashih",
+      "author": "Münzirî",
+      "title": "Şerḥu’s-Sünen (Ḥâşiyetü’s-Sünen) & Kitâbü’l-ʿİddi’l-mevrûd fî ḥavâşî Süneni Ebî Dâvûd",
+      "summaryTr": "es-Sünen’de gördüğü bazı hataları küçük hacimli Şerḥu’s-Sünen çalışmasında tashih etmiş ve ayrıca Kitâbü’l-ʿİddi’l-mevrûd adlı bir hâşiye kaleme almıştır.",
+      "publicationInfo": "Şerḥu’s-Sünen: nşr. Telattuf Hüseyin el-Azîm, Delhi, ts. (taşbaskı) · Hâşiye: Süleymaniye Ktp., Reîsülküttâb Mustafa Efendi, nr. 130"
+    },
+    {
+      "id": "ibn-kayyim",
+      "order": 3,
+      "kind": "ihtisar",
+      "kindLabelTr": "Tehzîb & Açıklama",
+      "author": "İbn Kayyim el-Cevziyye",
+      "title": "Tehẕîbü Muḫtaṣarı Süneni Ebî Dâvûd",
+      "summaryTr": "Münzirî’nin Muḫtaṣar’ı çerçevesinde bazı hadisler üzerinde açıklamalar yaptığı önemli çalışmasıdır.",
+      "publicationInfo": "Delhi 1891; nşr. Ahmed Muhammed Şâkir – Muhammed Hâmid el-Fıkī, I-VIII, Kahire 1367-1369 (Münzirî ve Hattâbî ile birlikte)"
+    },
+    {
+      "id": "diyubendi",
+      "order": 4,
+      "kind": "hasiye_tashih",
+      "kindLabelTr": "Tashih",
+      "author": "Mahmûd Hasan Diyûbendî",
+      "title": "Taṣḥîḥu Ebî Dâvûd",
+      "summaryTr": "Sünenü Ebî Dâvûd’un matbu ve yazma nüshalarını inceleyerek sağlam bir nüsha meydana getirmiştir.",
+      "publicationInfo": "Delhi 1318/1900"
+    },
+    {
+      "id": "elbani",
+      "order": 5,
+      "kind": "tasnif_mustahrec",
+      "kindLabelTr": "Sahih / Zayıf Tasnifi",
+      "author": "Nâsırüddin el-Elbânî",
+      "title": "Ṣaḥîḥu Süneni Ebî Dâvûd & Żaʿîfü Süneni Ebî Dâvûd",
+      "summaryTr": "es-Sünen’deki rivayetleri sahih ve zayıf olarak iki kısma ayırıp müstakil kitaplar halinde yayımlamıştır.",
+      "publicationInfo": "Ṣaḥîḥu Süneni Ebî Dâvûd (I-III, Riyad 1989) · Żaʿîfü Süneni Ebî Dâvûd (Beyrut 1991)"
+    },
+    {
+      "id": "mustahrec",
+      "order": 6,
+      "kind": "tasnif_mustahrec",
+      "kindLabelTr": "Müstahrec",
+      "author": "Kāsım b. Asbağ & İbn Mencûye",
+      "title": "es-Sünen Üzerine Müstahrecler",
+      "summaryTr": "es-Sünen hakkında Kāsım b. Asbağ ile İbn Mencûye birer müstahrec kaleme almışlardır.",
+      "publicationInfo": "Klasik Hadis Edebiyatı (TDV İA, 38/146)"
+    },
+    {
+      "id": "turkce-tercume",
+      "order": 7,
+      "kind": "tercume_arastirma",
+      "kindLabelTr": "Türkçe Tercüme & Şerh",
+      "author": "Necati Yeniel & Hüseyin Kayapınar",
+      "title": "Süneni Ebî Dâvûd Terceme ve Şerhi",
+      "summaryTr": "es-Sünen’i tam metin halinde Türkçe’ye çevirip şerhetmişlerdir (İsmail L. Çakan’ın mukaddimesiyle).",
+      "publicationInfo": "I-XV, İstanbul 1987-2000"
+    },
+    {
+      "id": "sabran-tezi",
+      "order": 8,
+      "kind": "tercume_arastirma",
+      "kindLabelTr": "Yüksek Lisans Tezi",
+      "author": "Muhammed Sabrân Efendi el-Endonîsî",
+      "title": "el-Metrûkûn ve’l-mechûlûn ve merviyyâtühüm fî Süneni Ebî Dâvûd es-Sicistânî",
+      "summaryTr": "es-Sünen’deki metrûk ve meçhul râviler ile rivayetlerini inceleyen akademik yüksek lisans tezidir.",
+      "publicationInfo": "Mekke 1396/1976"
+    },
+    {
+      "id": "robson-kocyigit",
+      "order": 9,
+      "kind": "tercume_arastirma",
+      "kindLabelTr": "Nüsha & Rivayet Makalesi",
+      "author": "James Robson (Tercüme: Talat Koçyiğit)",
+      "title": "“The Transmission of Abu Dawud’s Sunan”",
+      "summaryTr": "es-Sünen’in nüshaları ve rivayet tarihi üzerine Robson’un kaleme aldığı makaleyi Talat Koçyiğit Türkçe’ye çevirmiştir.",
+      "publicationInfo": "BSOAS, XIV (1952), s. 579-588 · Türkçe trc.: AÜİFD, V/4 (1956), s. 173-182"
+    }
+  ],
+  "bibliography": [
+    {
+      "id": 1,
+      "citation": "Ebû Dâvûd, es-Sünen (nşr. M. Muhyiddin Abdülhamîd), Beyrut, ts. (Dârü’l-fikr), neşredenin girişi, I, 3-16; a.e.: Süneni Ebî Dâvûd Terceme ve Şerhi (trc. Necati Yeniel – Hüseyin Kayapınar), İstanbul 1987, İsmail L. Çakan’ın Mukaddime’si, I, s. XXX-LVI."
+    },
+    {
+      "id": 2,
+      "citation": "Hatîb, Târîḫu Baġdâd, IX, 55-58."
+    },
+    {
+      "id": 3,
+      "citation": "Zehebî, Aʿlâmü’n-nübelâʾ, XV, 307-308, 538-539."
+    },
+    {
+      "id": 4,
+      "citation": "Keşfü’ẓ-ẓunûn, II, 1004-1006."
+    },
+    {
+      "id": 5,
+      "citation": "Sıddîk Hasan Han, el-Ḥıṭṭa fî ẕikri’ṣ-ṣıḥâḥi’s-sitte, Beyrut 1405/1985, s. 211-218."
+    },
+    {
+      "id": 6,
+      "citation": "Sezgin, GAS (Ar.), I, 150-152, 294."
+    },
+    {
+      "id": 7,
+      "citation": "M. Reşâd Halîfe, Medresetü’l-ḥadîs̱ fî Mıṣr, Kahire 1403/1983, s. 154-163."
+    },
+    {
+      "id": 8,
+      "citation": "Sâlih Yûsuf Ma‘tûk, Bedrüddîn el-ʿAynî ve es̱eruhû fî ʿilmi’l-ḥadîs̱, Beyrut 1407/1987, s. 184-193."
+    },
+    {
+      "id": 9,
+      "citation": "Muhammed b. Lutfî es-Sabbâğ, Ebû Dâvûd: Ḥayâtühû ve Sünenüh, Beyrut-Dımaşk 1405/1985."
+    },
+    {
+      "id": 10,
+      "citation": "İsmail L. Çakan, Hadîs Edebiyâtı, İstanbul 1989, s. 77-86, 162-164."
+    },
+    {
+      "id": 11,
+      "citation": "Kettânî, er-Risâletü’l-müstetrafe (Özbek), s. 3-4, 22, 29-30."
+    },
+    {
+      "id": 12,
+      "citation": "Abdülhamit Birışık, “Mahmûd Hasan Diyûbendî”, DİA, XXVII, 367."
+    }
+  ]
+}

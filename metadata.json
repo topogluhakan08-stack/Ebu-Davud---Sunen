@@ -1,0 +1,6 @@
+{
+  "name": "Sünen-i Ebî Dâvûd · Kitâbü'l-Edeb Öğrenme Atlası",
+  "description": "Ebû Dâvûd es-Sicistânî, es-Sünen ve Kitâbü'l-Edeb (4740-4777) üzerine etkileşimli hadis ilimleri, isnad görselleştirme ve Arapça kelime analizi platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
