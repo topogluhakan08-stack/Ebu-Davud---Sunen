@@ -17,12 +17,45 @@ import {
 } from '../utils/storage';
 import { getCachedDictionary, loadDictionary, type Dictionary } from '../utils/i18n';
 import { TR_DICTIONARY } from '../data/i18n/tr';
+import {
+  getCachedHadithPack,
+  loadHadithPack,
+  type HadithLanguagePack,
+} from '../utils/hadithTranslations';
+import {
+  getCachedGlossaryPack,
+  getCachedWordLexiconPack,
+  loadGlossaryPack,
+  loadWordLexiconPack,
+  type GlossaryAndIsnadPack,
+  type WordLexiconPack,
+} from '../utils/lexiconTranslations';
+
+import {
+  getCachedArticlePack,
+  loadArticlePack,
+  type ArticleTranslationPack,
+} from '../utils/articleTranslations';
+import {
+  getCachedLearnPack,
+  loadLearnPack,
+  type LearnTranslationPack,
+} from '../utils/learnTranslations';
 
 interface AppContextValue {
   settings: AppSettings;
   progress: UserProgress;
   t: Dictionary;
   secondaryT: Dictionary | null;
+  hadithPack: HadithLanguagePack | null;
+  secondaryHadithPack: HadithLanguagePack | null;
+  glossaryPack: GlossaryAndIsnadPack | null;
+  secondaryGlossaryPack: GlossaryAndIsnadPack | null;
+  wordLexiconPack: WordLexiconPack | null;
+  secondaryWordLexiconPack: WordLexiconPack | null;
+  articlePack: ArticleTranslationPack | null;
+  secondaryArticlePack: ArticleTranslationPack | null;
+  learnPack: LearnTranslationPack | null;
   setLanguage: (lang: LanguageCode) => void;
   setSecondaryLanguage: (lang: SecondaryLanguageCode) => void;
   toggleTheme: () => void;
@@ -65,6 +98,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const s = loadSettings();
     return s.secondaryLanguage !== 'none' ? getCachedDictionary(s.secondaryLanguage) : null;
   });
+  const [hadithPack, setHadithPack] = useState<HadithLanguagePack | null>(() =>
+    getCachedHadithPack(loadSettings().language)
+  );
+  const [secondaryHadithPack, setSecondaryHadithPack] = useState<HadithLanguagePack | null>(() => {
+    const s = loadSettings();
+    return s.secondaryLanguage !== 'none' && s.secondaryLanguage !== s.language
+      ? getCachedHadithPack(s.secondaryLanguage)
+      : null;
+  });
+  const [glossaryPack, setGlossaryPack] = useState<GlossaryAndIsnadPack | null>(() =>
+    getCachedGlossaryPack(loadSettings().language)
+  );
+  const [secondaryGlossaryPack, setSecondaryGlossaryPack] = useState<GlossaryAndIsnadPack | null>(() => {
+    const s = loadSettings();
+    return s.secondaryLanguage !== 'none' && s.secondaryLanguage !== s.language
+      ? getCachedGlossaryPack(s.secondaryLanguage)
+      : null;
+  });
+  const [wordLexiconPack, setWordLexiconPack] = useState<WordLexiconPack | null>(() =>
+    getCachedWordLexiconPack(loadSettings().language)
+  );
+  const [secondaryWordLexiconPack, setSecondaryWordLexiconPack] = useState<WordLexiconPack | null>(() => {
+    const s = loadSettings();
+    return s.secondaryLanguage !== 'none' && s.secondaryLanguage !== s.language
+      ? getCachedWordLexiconPack(s.secondaryLanguage)
+      : null;
+  });
+  const [articlePack, setArticlePack] = useState<ArticleTranslationPack | null>(() =>
+    getCachedArticlePack(loadSettings().language)
+  );
+  const [secondaryArticlePack, setSecondaryArticlePack] = useState<ArticleTranslationPack | null>(() => {
+    const s = loadSettings();
+    return s.secondaryLanguage !== 'none' && s.secondaryLanguage !== s.language
+      ? getCachedArticlePack(s.secondaryLanguage)
+      : null;
+  });
+  const [learnPack, setLearnPack] = useState<LearnTranslationPack | null>(() =>
+    getCachedLearnPack(loadSettings().language)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +146,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       void loadDictionary(settings.language).then((dict) => {
         if (!cancelled) setPrimaryDict(dict);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (settings.language === 'tr') {
+      setHadithPack(null);
+      return;
+    }
+    const cached = getCachedHadithPack(settings.language);
+    if (cached) {
+      setHadithPack(cached);
+    } else {
+      void loadHadithPack(settings.language).then((pack) => {
+        if (!cancelled) setHadithPack(pack);
       });
     }
     return () => {
@@ -99,6 +190,150 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
   }, [settings.secondaryLanguage, settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (
+      settings.secondaryLanguage === 'none' ||
+      settings.secondaryLanguage === settings.language ||
+      settings.secondaryLanguage === 'tr'
+    ) {
+      setSecondaryHadithPack(null);
+      return;
+    }
+    const cached = getCachedHadithPack(settings.secondaryLanguage);
+    if (cached) {
+      setSecondaryHadithPack(cached);
+    } else {
+      void loadHadithPack(settings.secondaryLanguage).then((pack) => {
+        if (!cancelled) setSecondaryHadithPack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.secondaryLanguage, settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (settings.language === 'tr') {
+      setGlossaryPack(null);
+      setWordLexiconPack(null);
+      return;
+    }
+    const cachedG = getCachedGlossaryPack(settings.language);
+    if (cachedG) {
+      setGlossaryPack(cachedG);
+    } else {
+      void loadGlossaryPack(settings.language).then((pack) => {
+        if (!cancelled) setGlossaryPack(pack);
+      });
+    }
+    const cachedW = getCachedWordLexiconPack(settings.language);
+    if (cachedW) {
+      setWordLexiconPack(cachedW);
+    } else {
+      void loadWordLexiconPack(settings.language).then((pack) => {
+        if (!cancelled) setWordLexiconPack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (
+      settings.secondaryLanguage === 'none' ||
+      settings.secondaryLanguage === settings.language ||
+      settings.secondaryLanguage === 'tr'
+    ) {
+      setSecondaryGlossaryPack(null);
+      setSecondaryWordLexiconPack(null);
+      return;
+    }
+    const cachedG = getCachedGlossaryPack(settings.secondaryLanguage);
+    if (cachedG) {
+      setSecondaryGlossaryPack(cachedG);
+    } else {
+      void loadGlossaryPack(settings.secondaryLanguage).then((pack) => {
+        if (!cancelled) setSecondaryGlossaryPack(pack);
+      });
+    }
+    const cachedW = getCachedWordLexiconPack(settings.secondaryLanguage);
+    if (cachedW) {
+      setSecondaryWordLexiconPack(cachedW);
+    } else {
+      void loadWordLexiconPack(settings.secondaryLanguage).then((pack) => {
+        if (!cancelled) setSecondaryWordLexiconPack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.secondaryLanguage, settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (settings.language === 'tr') {
+      setArticlePack(null);
+      return;
+    }
+    const cached = getCachedArticlePack(settings.language);
+    if (cached) {
+      setArticlePack(cached);
+    } else {
+      void loadArticlePack(settings.language).then((pack) => {
+        if (!cancelled) setArticlePack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (
+      settings.secondaryLanguage === 'none' ||
+      settings.secondaryLanguage === settings.language ||
+      settings.secondaryLanguage === 'tr'
+    ) {
+      setSecondaryArticlePack(null);
+      return;
+    }
+    const cached = getCachedArticlePack(settings.secondaryLanguage);
+    if (cached) {
+      setSecondaryArticlePack(cached);
+    } else {
+      void loadArticlePack(settings.secondaryLanguage).then((pack) => {
+        if (!cancelled) setSecondaryArticlePack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.secondaryLanguage, settings.language]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (settings.language === 'tr') {
+      setLearnPack(null);
+      return;
+    }
+    const cached = getCachedLearnPack(settings.language);
+    if (cached) {
+      setLearnPack(cached);
+    } else {
+      void loadLearnPack(settings.language).then((pack) => {
+        if (!cancelled) setLearnPack(pack);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.language]);
 
   useEffect(() => {
     saveSettings(settings);
@@ -202,6 +437,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         progress,
         t: primaryDict,
         secondaryT: secondaryDict,
+        hadithPack,
+        secondaryHadithPack,
+        glossaryPack,
+        secondaryGlossaryPack,
+        wordLexiconPack,
+        secondaryWordLexiconPack,
+        articlePack,
+        secondaryArticlePack,
+        learnPack,
         setLanguage,
         setSecondaryLanguage,
         toggleTheme,

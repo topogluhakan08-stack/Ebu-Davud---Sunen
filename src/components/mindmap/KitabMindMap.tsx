@@ -15,7 +15,7 @@ import { BABS } from '../../data/babs';
 import hadislerRaw from '../../data/hadisler.json';
 import type { BabInfo, HadithItem } from '../../types';
 import { useApp } from '../../context/AppContext';
-import { getBabDisplayTitle } from '../../utils/localizedText';
+import { getLocalizedBab, getLocalizedHadithContent } from '../../utils/hadithTranslations';
 import { SymbolicBabIcon } from '../icons/SymbolicIllustrations';
 import { ManuscriptCard } from '../ui/Card';
 
@@ -25,6 +25,8 @@ export interface ThematicCluster {
   id: string;
   titleTr: string;
   titleFr: string;
+  titleDe: string;
+  titleNl: string;
   titleAr: string;
   babIds: number[];
   colorLight: string;
@@ -36,6 +38,8 @@ export const MINDMAP_CLUSTERS: ThematicCluster[] = [
     id: 'hilm-vakar-ofke',
     titleTr: 'Hilim, Vakar & Öfke',
     titleFr: 'Clémence, Dignité & Colère',
+    titleDe: 'Sanftmut, Würde & Zorn',
+    titleNl: 'Zachtmoedigheid, Waardigheid & Woede',
     titleAr: 'الحلم والوقار والغضب',
     babIds: [1, 2, 3, 4],
     colorLight: '#1D4E89',
@@ -45,6 +49,8 @@ export const MINDMAP_CLUSTERS: ThematicCluster[] = [
     id: 'kolaylik-muaseret',
     titleTr: 'Kolaylık & Muaşeret',
     titleFr: 'Facilité & Sociabilité',
+    titleDe: 'Erleichterung & Umgang',
+    titleNl: 'Gemak & Goede Omgang',
     titleAr: 'التيسير وحسن العشرة',
     babIds: [5, 6],
     colorLight: '#2B6E44',
@@ -54,6 +60,8 @@ export const MINDMAP_CLUSTERS: ThematicCluster[] = [
     id: 'haya-ahlak',
     titleTr: 'Hayâ & Güzel Ahlâk',
     titleFr: 'Pudeur & Noblesse morale',
+    titleDe: 'Schamgefühl & Guter Charakter',
+    titleNl: 'Schaamte & Goed Karakter',
     titleAr: 'الحياء وحسن الخلق',
     babIds: [7, 8],
     colorLight: '#3E5C76',
@@ -63,6 +71,8 @@ export const MINDMAP_CLUSTERS: ThematicCluster[] = [
     id: 'tevazu-ovgu-rifk',
     titleTr: 'Tevazu, Övgü & Rıfk',
     titleFr: 'Humilité, Éloge & Douceur',
+    titleDe: 'Bescheidenheit, Lob & Milde',
+    titleNl: 'Bescheidenheid, Lof & Zachtaardigheid',
     titleAr: 'التواضع والتمـادح والرفق',
     babIds: [9, 10, 11],
     colorLight: '#8A6024',
@@ -96,7 +106,7 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
   initialExpandedBabs = [1, 4],
 }) => {
   const navigate = useNavigate();
-  const { settings, progress, t } = useApp();
+  const { settings, progress, t, hadithPack } = useApp();
   const isDark = settings.theme === 'dark';
   const resolvedTitle = title ?? t.mindMap.title;
   const resolvedSubtitle = subtitle ?? t.mindMap.subtitle;
@@ -261,6 +271,15 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
 
   const activeSummaryBab = hovered?.bab ?? BABS.find((b) => b.id === selectedBabId) ?? BABS[0];
   const activeSummaryHadith = hovered?.hadith;
+  const activeSummaryBabMeta = getLocalizedBab(activeSummaryBab, settings.language, hadithPack);
+  const activeSummaryHadithContent = activeSummaryHadith
+    ? getLocalizedHadithContent(
+        activeSummaryHadith,
+        settings.language,
+        hadithPack,
+        t.common.translationPreparing
+      )
+    : null;
 
   return (
     <ManuscriptCard
@@ -363,7 +382,11 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
               ? cluster.titleTr
               : settings.language === 'fr'
                 ? cluster.titleFr
-                : cluster.titleAr;
+                : settings.language === 'de'
+                  ? cluster.titleDe
+                  : settings.language === 'nl'
+                    ? cluster.titleNl
+                    : cluster.titleAr;
           return (
             <button
               key={cluster.id}
@@ -564,7 +587,8 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
               const softBg = isDark ? node.bab.softBgDarkHex : node.bab.softBgHex;
               const dimmed = activeClusterId !== 'all' && activeClusterId !== node.cluster.id;
               const isSelected = selectedBabId === node.bab.id;
-              const fullBabTitle = getBabDisplayTitle(node.bab, settings.language);
+              const localizedNodeBab = getLocalizedBab(node.bab, settings.language, hadithPack);
+              const fullBabTitle = localizedNodeBab.title;
               const shortTitle =
                 fullBabTitle.length > 18 ? fullBabTitle.slice(0, 17) + '…' : fullBabTitle;
 
@@ -576,7 +600,7 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
                   role="button"
                   tabIndex={0}
                   aria-expanded={node.isExpanded}
-                  aria-label={`${node.bab.numberLabel}: ${fullBabTitle} (${node.hadithCount})`}
+                  aria-label={`${localizedNodeBab.numberLabel}: ${fullBabTitle} (${node.hadithCount})`}
                   onClick={() => toggleBab(node.bab.id)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -608,7 +632,7 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
                     fill={color}
                     fontFamily="var(--font-sans)"
                   >
-                    {node.bab.numberLabel}
+                    {localizedNodeBab.numberLabel}
                   </text>
                   <text
                     y={22}
@@ -712,7 +736,7 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
           </div>
           <div className="space-y-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--text-muted)]">
-              <span>{activeSummaryBab.numberLabel}</span>
+              <span>{activeSummaryBabMeta.numberLabel}</span>
               <span>·</span>
               <span className="font-tabular">
                 {activeSummaryHadith
@@ -721,27 +745,15 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
               </span>
             </div>
             <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-primary)] leading-snug">
-              {activeSummaryHadith
-                ? settings.language === 'tr'
-                  ? activeSummaryHadith.translationTr.slice(0, 140) +
-                    (activeSummaryHadith.translationTr.length > 140 ? '…' : '')
-                  : settings.language === 'fr'
-                    ? activeSummaryHadith.translationFr.slice(0, 140) +
-                      (activeSummaryHadith.translationFr.length > 140 ? '…' : '')
-                    : settings.language === 'ar'
-                      ? activeSummaryHadith.matnAr.slice(0, 140) +
-                        (activeSummaryHadith.matnAr.length > 140 ? '…' : '')
-                      : t.common.translationPreparing
-                : getBabDisplayTitle(activeSummaryBab, settings.language)}
+              {activeSummaryHadith && activeSummaryHadithContent
+                ? activeSummaryHadithContent.translation.slice(0, 140) +
+                  (activeSummaryHadithContent.translation.length > 140 ? '…' : '')
+                : activeSummaryBabMeta.title}
             </h3>
             <p className="text-xs text-[var(--text-secondary)]">
-              {activeSummaryHadith
-                ? settings.language === 'tr'
-                  ? activeSummaryHadith.lessonsTr[0]
-                  : t.common.translationPreparing
-                : settings.language === 'tr'
-                  ? activeSummaryBab.subtitleTr
-                  : t.common.translationPreparing}
+              {activeSummaryHadith && activeSummaryHadithContent
+                ? activeSummaryHadithContent.lessons[0] || t.common.translationPreparing
+                : activeSummaryBabMeta.subtitle}
             </p>
           </div>
         </div>
@@ -760,7 +772,7 @@ export const KitabMindMap: React.FC<KitabMindMapProps> = ({
           <span>
             {activeSummaryHadith
               ? `#${activeSummaryHadith.id} · ${t.mindMap.openBabHadiths}`
-              : `${activeSummaryBab.numberLabel} · ${t.mindMap.openBabHadiths}`}
+              : `${activeSummaryBabMeta.numberLabel} · ${t.mindMap.openBabHadiths}`}
           </span>
           <ArrowRight className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />
         </button>

@@ -21,9 +21,9 @@ import {
   type QuestionGameType,
   type QuizBankItem,
 } from '../../data/questionBank';
+import { useApp } from '../../context/AppContext';
 import { useSpeech } from '../../hooks/useSpeech';
 import {
-  BADGE_DEFS,
   finalizeQuizSession,
   getLevelForXp,
   recordQuizOutcome,
@@ -31,6 +31,12 @@ import {
   type GamificationState,
   type SessionLengthOption,
 } from '../../utils/learnEngine';
+import {
+  getLocalizedBadge,
+  getLocalizedLearnUi,
+  getLocalizedLevelTitle,
+} from '../../utils/learnTranslations';
+import { formatLocaleNumber } from '../../utils/articleTranslations';
 import { ManuscriptCard } from '../ui/Card';
 import { StatusBadge } from '../ui/Badge';
 import { CityMapQuestion } from './CityMapQuestion';
@@ -39,35 +45,29 @@ interface QuizArenaProps {
   gamification: GamificationState;
   onGamificationChange: (next: GamificationState) => void;
   externalMistakesOnlyTrigger?: number;
+  questionBank?: QuizBankItem[];
 }
 
-const CATEGORY_TABS: Array<{ id: QuestionCategory | 'all'; label: string }> = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'hadisler', label: '38 Hadis' },
-  { id: 'ebu_davud', label: 'Ebû Dâvûd TDV' },
-  { id: 'sunen', label: 'es-Sünen TDV' },
-  { id: 'sozluk', label: 'Usûl Sözlüğü' },
-  { id: 'bab_temalari', label: 'Bab Temaları' },
+const CATEGORY_ORDER: Array<QuestionCategory | 'all'> = [
+  'all',
+  'hadisler',
+  'ebu_davud',
+  'sunen',
+  'sozluk',
+  'bab_temalari',
 ];
 
-const GAME_TYPE_LABELS: Array<{ id: QuestionGameType | 'all'; label: string }> = [
-  { id: 'all', label: 'Karışık (9 Tür)' },
-  { id: 'multiple_choice', label: 'Çoktan Seçmeli' },
-  { id: 'arabic_blank', label: 'Arapça Boşluk' },
-  { id: 'matching', label: 'Eşleştirme' },
-  { id: 'word_order', label: 'Kelime Sıralama' },
-  { id: 'isnad_order', label: 'İsnad Sıralama' },
-  { id: 'which_bab', label: 'Hangi Babta?' },
-  { id: 'audio_listening', label: 'Sesli Dinleme' },
-  { id: 'true_false', label: 'Doğru / Yanlış' },
-  { id: 'city_map', label: '14 Şehir Haritası' },
-];
-
-const LENGTH_OPTIONS: Array<{ value: SessionLengthOption; label: string }> = [
-  { value: 10, label: '10 Soru' },
-  { value: 20, label: '20 Soru' },
-  { value: 50, label: '50 Soru' },
-  { value: 'all', label: 'Tümü' },
+const GAME_TYPE_ORDER: Array<QuestionGameType | 'all'> = [
+  'all',
+  'multiple_choice',
+  'arabic_blank',
+  'matching',
+  'word_order',
+  'isnad_order',
+  'which_bab',
+  'audio_listening',
+  'true_false',
+  'city_map',
 ];
 
 function deterministicShuffle<T>(arr: T[], seed: number): T[] {
@@ -87,8 +87,17 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   gamification,
   onGamificationChange,
   externalMistakesOnlyTrigger = 0,
+  questionBank = QUESTION_BANK,
 }) => {
+  const { settings, learnPack } = useApp();
   const { speak } = useSpeech();
+
+  const lang = settings.language;
+  const learnUi = getLocalizedLearnUi(lang, learnPack);
+  const ui = learnUi.quiz;
+  const xpUnit = learnUi.learnPage.xpUnit;
+  const levelShort = learnUi.learnPage.levelShort;
+  const activeBank = questionBank.length > 0 ? questionBank : QUESTION_BANK;
   const bankStats = useMemo(() => getQuestionBankStats(), []);
 
   // Session Config
@@ -103,6 +112,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   const [qIndex, setQIndex] = useState(0);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isCurrentCorrect, setIsCurrentCorrect] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
   const [selectedChoiceIdx, setSelectedChoiceIdx] = useState<number | null>(null);
   const [selectedBool, setSelectedBool] = useState<boolean | null>(null);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
@@ -129,14 +139,14 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   const [sessionBadges, setSessionBadges] = useState<string[]>([]);
   const [sessionFinalized, setSessionFinalized] = useState(false);
 
-  // Snapshot mistake IDs at session start so answering mistakes removes them from state without mutating active session array
   const [sessionMistakeIdsSnapshot, setSessionMistakeIdsSnapshot] = useState<string[]>(
     gamification.mistakeIds
   );
 
+  // Deterministic seeded selection preserves the exact active session across language switches!
   const sessionQuestions = useMemo(
     () =>
-      selectQuizSession(QUESTION_BANK, {
+      selectQuizSession(activeBank, {
         category,
         gameType,
         length: lengthOpt,
@@ -144,7 +154,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
         mistakeIds: sessionMistakeIdsSnapshot,
         seed: sessionSeed,
       }),
-    [category, gameType, lengthOpt, mistakesOnly, sessionMistakeIdsSnapshot, sessionSeed]
+    [activeBank, category, gameType, lengthOpt, mistakesOnly, sessionMistakeIdsSnapshot, sessionSeed]
   );
 
   const currentQuestion: QuizBankItem | undefined = sessionQuestions[qIndex];
@@ -155,6 +165,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   const resetQuestionUiState = (q: QuizBankItem | undefined, seedOffset: number) => {
     setHasAnswered(false);
     setIsCurrentCorrect(false);
+    setTimedOut(false);
     setSelectedChoiceIdx(null);
     setSelectedBool(null);
     setSelectedCityId(null);
@@ -203,7 +214,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
     setSessionBadges([]);
     setSessionFinalized(false);
 
-    const nextQs = selectQuizSession(QUESTION_BANK, {
+    const nextQs = selectQuizSession(activeBank, {
       category: nextCat,
       gameType: nextGt,
       length: nextLen,
@@ -214,7 +225,6 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
     resetQuestionUiState(nextQs[0], nextSeed);
   };
 
-  // Triggered from MasteryDashboard's "Sadece Yanlışlarımı Çalış" button
   useEffect(() => {
     if (externalMistakesOnlyTrigger > 0) {
       restartSession({ mistakes: true, cat: 'all', gt: 'all', len: 'all' });
@@ -222,18 +232,19 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalMistakesOnlyTrigger]);
 
-  // Initialize shuffled isnadDraft on initial mount
+  // Keep isnadDraft synchronized on mount or language change without resetting progress
   useEffect(() => {
-    if (currentQuestion?.gameType === 'isnad_order' && currentQuestion.orderedItems && isnadDraft.length === 0) {
+    if (currentQuestion?.gameType === 'isnad_order' && currentQuestion.orderedItems) {
       setIsnadDraft(deterministicShuffle(currentQuestion.orderedItems, sessionSeed + qIndex + 19));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestion?.id]);
+  }, [currentQuestion?.id, currentQuestion?.orderedItems?.[0]]);
 
-  // Countdown timer when Zamana Karşı (timedMode) is enabled
+  // Countdown timer when timedMode is active
   useEffect(() => {
     if (!timedMode || hasAnswered || isFinished || !currentQuestion) return;
     if (secondsLeft <= 0) {
+      setTimedOut(true);
       submitOutcome(false);
       return;
     }
@@ -288,7 +299,6 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
     onGamificationChange(nextState);
   };
 
-  // Shuffled choices for matching & word_order
   const shuffledRightPairs = useMemo(() => {
     if (currentQuestion?.gameType !== 'matching' || !currentQuestion.pairs) return [];
     return deterministicShuffle(
@@ -306,6 +316,14 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   }, [currentQuestion, sessionSeed, qIndex]);
 
   const levelInfo = getLevelForXp(gamification.xp);
+  const levelTitle = getLocalizedLevelTitle(levelInfo.current.level, lang, learnPack);
+
+  const lengthOptions: Array<{ value: SessionLengthOption; label: string }> = [
+    { value: 10, label: '10' },
+    { value: 20, label: '20' },
+    { value: 50, label: '50' },
+    { value: 'all', label: ui.lengthAll },
+  ];
 
   const handleUseHint = () => {
     if (hintsLeft <= 0 || hintRevealed || hasAnswered) return;
@@ -325,25 +343,33 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
   };
 
   return (
-    <section aria-label="Etkileşimli 9 Oyun Modlu Bilgi Arenası" className="space-y-6">
+    <section aria-label={learnUi.learnPage.tabs.quiz} className="space-y-6">
       {/* Gamification Live HUD */}
       <ManuscriptCard className="p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="rounded-xl bg-[var(--accent-gold-soft)] px-3 py-1.5 text-xs font-bold text-[#875C10] dark:text-[var(--accent-gold)]">
-            Sv. {levelInfo.current.level} · {levelInfo.current.titleTr} ({gamification.xp} XP)
+            {levelShort} {levelInfo.current.level} · {levelTitle} ({formatLocaleNumber(gamification.xp, lang)} {xpUnit})
           </div>
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-primary)] font-tabular">
             <Flame className="w-4 h-4 text-[#A64B2A] dark:text-[#FB923C]" aria-hidden="true" />
-            <span>{gamification.streakDays} Gün Seri</span>
+            <span>
+              {gamification.streakDays} {ui.streak}
+            </span>
           </div>
           <div className="text-xs text-[var(--text-secondary)] font-tabular">
-            Günlük: <strong>{gamification.todayXp}/{gamification.dailyGoalXp} XP</strong>
+            {ui.dailyGoal}:{' '}
+            <strong>
+              {gamification.todayXp}/{gamification.dailyGoalXp} {xpUnit}
+            </strong>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 text-xs">
           {timedMode && (
-            <div className="inline-flex items-center gap-1 text-[#8C3B4A] dark:text-[#F9A8D4] font-bold">
+            <div
+              className="inline-flex items-center gap-1 text-[#8C3B4A] dark:text-[#F9A8D4] font-bold"
+              aria-label={ui.livesAria}
+            >
               {Array.from({ length: 3 }, (_, i) => (
                 <Heart
                   key={i}
@@ -355,26 +381,25 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
             </div>
           )}
           <span className="rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2.5 py-1 font-tabular font-semibold text-[var(--text-primary)]">
-            Skor: {sessionCorrect}/{sessionAnswered} · Seri: {combo}x
+            {sessionCorrect}/{sessionAnswered} · {combo}× {ui.comboSuffix}
           </span>
           <span className="rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2.5 py-1 font-tabular font-semibold text-[var(--accent-emerald)]">
-            Banka: {bankStats.total} Soru
+            {ui.poolPrefix} {bankStats.total} {ui.questionUnit}
           </span>
         </div>
       </ManuscriptCard>
 
       {/* Filters & Controls Panel */}
       <ManuscriptCard className="p-4 space-y-3.5">
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORY_TABS.map((cat) => {
-            const active = category === cat.id && !mistakesOnly;
-            const count =
-              cat.id === 'all' ? bankStats.total : bankStats.byCategory[cat.id];
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={ui.categoryFilterAria}>
+          {CATEGORY_ORDER.map((catId) => {
+            const active = category === catId && !mistakesOnly;
+            const count = catId === 'all' ? bankStats.total : bankStats.byCategory[catId];
             return (
               <button
-                key={cat.id}
+                key={catId}
                 type="button"
-                onClick={() => restartSession({ cat: cat.id, mistakes: false })}
+                onClick={() => restartSession({ cat: catId, mistakes: false })}
                 aria-pressed={active}
                 className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                   active
@@ -382,7 +407,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                     : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-hairline)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                {cat.label} ({count})
+                {ui.categories[catId]} ({count})
               </button>
             );
           })}
@@ -398,7 +423,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                   : 'bg-[#F7EAED] dark:bg-[#361921] text-[#8C3B4A] dark:text-[#F9A8D4] border-[#8C3B4A]/40'
               }`}
             >
-              Sadece Yanlışlarımı Çalış ({gamification.mistakeIds.length})
+              {mistakesOnly ? ui.exitMistakesBtn : ui.reviewMistakesBtn} ({gamification.mistakeIds.length})
             </button>
           )}
         </div>
@@ -406,25 +431,28 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[var(--border-hairline)]">
           <div className="flex flex-wrap items-center gap-2">
             <label className="inline-flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-              <span>Oyun Türü:</span>
+              <span>{ui.gameTypeLabel}</span>
               <select
-                aria-label="Quiz oyun türü seçici"
+                aria-label={ui.gameTypeLabel}
                 value={gameType}
                 onChange={(e) =>
                   restartSession({ gt: e.target.value as QuestionGameType | 'all' })
                 }
                 className="min-h-[36px] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2.5 text-xs text-[var(--text-primary)]"
               >
-                {GAME_TYPE_LABELS.map((gt) => (
-                  <option key={gt.id} value={gt.id}>
-                    {gt.label}
+                {GAME_TYPE_ORDER.map((gtId) => (
+                  <option key={gtId} value={gtId}>
+                    {ui.gameTypes[gtId]}
                   </option>
                 ))}
               </select>
             </label>
 
-            <div className="inline-flex rounded-xl bg-[var(--bg-surface)] p-0.5 border border-[var(--border-hairline)]">
-              {LENGTH_OPTIONS.map((opt) => (
+            <div className="inline-flex items-center gap-1 rounded-xl bg-[var(--bg-surface)] p-0.5 border border-[var(--border-hairline)]">
+              <span className="px-2 text-[11px] text-[var(--text-muted)]">
+                {ui.questionCountLabel}
+              </span>
+              {lengthOptions.map((opt) => (
                 <button
                   key={String(opt.value)}
                   type="button"
@@ -454,7 +482,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
               }`}
             >
               <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{timedMode ? 'Zamana Karşı (Aktif)' : 'Rahat Mod'}</span>
+              <span>{timedMode ? ui.timedModeLabel : ui.relaxedModeLabel}</span>
             </button>
 
             <button
@@ -463,7 +491,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
               className="min-h-[36px] px-3 py-1 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-xs font-medium text-[var(--text-primary)] inline-flex items-center gap-1 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Yeniden Karıştır</span>
+              <span>{ui.summaryNewSessionBtn}</span>
             </button>
           </div>
         </div>
@@ -474,17 +502,15 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
         <ManuscriptCard className="p-8 text-center space-y-3 max-w-xl mx-auto">
           <Sparkles className="w-8 h-8 text-[var(--accent-gold)] mx-auto" aria-hidden="true" />
           <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-            Bu filtreye uyan soru bulunamadı
+            {ui.emptyPoolTitle}
           </h2>
-          <p className="text-sm text-[var(--text-secondary)]">
-            Kategori, oyun türü veya Tekrar Listesi filtresini genişleterek tüm {bankStats.total} soruya ulaşabilirsiniz.
-          </p>
+          <p className="text-sm text-[var(--text-secondary)]">{ui.emptyPoolDesc}</p>
           <button
             type="button"
             onClick={() => restartSession({ cat: 'all', gt: 'all', mistakes: false, len: 10 })}
             className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold cursor-pointer"
           >
-            Karma 10 Soruya Dön
+            {ui.showAllBtn}
           </button>
         </ManuscriptCard>
       ) : !isFinished && currentQuestion ? (
@@ -493,13 +519,13 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-tabular font-bold text-[var(--text-primary)]">
-                Soru {qIndex + 1} / {sessionQuestions.length}
+                {ui.progressQuestion} {qIndex + 1} / {sessionQuestions.length}
               </span>
               <span className="rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2 py-0.5 font-medium text-[var(--text-secondary)]">
-                {GAME_TYPE_LABELS.find((g) => g.id === currentQuestion.gameType)?.label}
+                {ui.gameTypes[currentQuestion.gameType]}
               </span>
               {currentQuestion.needs_review && (
-                <StatusBadge variant="needs_review" label="İnceleme Notu" />
+                <StatusBadge variant="needs_review" label={ui.needsReviewBadge} />
               )}
             </div>
 
@@ -512,7 +538,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                       : 'bg-[var(--bg-surface)] text-[var(--text-primary)]'
                   }`}
                 >
-                  {secondsLeft} sn
+                  {secondsLeft} {ui.secondsShort}
                 </span>
               )}
               <button
@@ -522,7 +548,9 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                 className="min-h-[30px] px-2.5 py-0.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center gap-1 disabled:opacity-45 cursor-pointer disabled:cursor-default"
               >
                 <HelpCircle className="w-3.5 h-3.5 text-[var(--accent-gold)]" aria-hidden="true" />
-                <span>İpucu ({hintsLeft})</span>
+                <span>
+                  {ui.hintShowBtn} ({hintsLeft})
+                </span>
               </button>
               <span className="hidden sm:inline">{currentQuestion.sourceRef}</span>
             </div>
@@ -546,8 +574,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
 
             {hintRevealed && (
               <div className="rounded-xl bg-[var(--accent-gold-soft)]/70 border border-[var(--accent-gold)] px-3.5 py-2 text-xs text-[var(--text-primary)]">
-                <strong>İpucu:</strong>{' '}
-                {currentQuestion.hint || `Kaynak referansı: ${currentQuestion.sourceRef}`}
+                {currentQuestion.hint || `${ui.sourcePrefix} ${currentQuestion.sourceRef}`}
               </div>
             )}
 
@@ -560,9 +587,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                         {currentQuestion.arabicPrompt}
                       </p>
                     ) : (
-                      <span>
-                        Sağdaki hoparlör butonuna basarak Arapça ses kaydını dinleyin ve doğru tercümeyi seçin.
-                      </span>
+                      <span>{ui.audioHiddenHint}</span>
                     )}
                   </div>
                 ) : (
@@ -579,11 +604,11 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                   onClick={() =>
                     speak(currentQuestion.arabicPrompt!, 'ar-SA', { id: currentQuestion.id })
                   }
-                  aria-label="Sorudaki Arapça metni dinle"
+                  aria-label={ui.listenArabicHadith}
                   className="min-h-[40px] px-3.5 py-2 flex items-center justify-center gap-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold shrink-0 cursor-pointer"
                 >
                   <Volume2 className="w-4 h-4" aria-hidden="true" />
-                  <span>{currentQuestion.gameType === 'audio_listening' ? 'Kaydı Dinle' : 'Dinle'}</span>
+                  <span>{learnUi.flashcards.listenBtn}</span>
                 </button>
               </div>
             )}
@@ -600,7 +625,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
             )}
           </div>
 
-          {/* RENDERER 1: 4-Option Questions (MC, arabic_blank, which_bab, audio_listening) */}
+          {/* RENDERER 1: 4-Option Questions */}
           {currentQuestion.options && currentQuestion.correctIndex !== undefined && (
             <div className="grid grid-cols-1 gap-2.5">
               {currentQuestion.options.map((opt, idx) => {
@@ -630,9 +655,14 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                       setSelectedChoiceIdx(idx);
                       submitOutcome(idx === currentQuestion.correctIndex);
                     }}
-                    className={`min-h-[48px] px-4 py-3 rounded-xl border text-left text-sm flex items-center justify-between gap-3 transition-colors cursor-pointer disabled:cursor-default ${btnClass}`}
+                    className={`min-h-[48px] px-4 py-3 rounded-xl border text-start text-sm flex items-center justify-between gap-3 transition-colors cursor-pointer disabled:cursor-default ${btnClass}`}
                   >
-                    <span className={isArChoice ? 'font-arabic-inline text-xl' : ''}>{opt}</span>
+                    <span
+                      dir={isArChoice ? 'rtl' : undefined}
+                      className={isArChoice ? 'font-arabic-inline text-xl' : ''}
+                    >
+                      {opt}
+                    </span>
                     {hasAnswered && isCorrect && (
                       <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
                     )}
@@ -645,12 +675,12 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
             </div>
           )}
 
-          {/* RENDERER 2: True / False Rapid Round */}
+          {/* RENDERER 2: True / False */}
           {currentQuestion.gameType === 'true_false' && (
             <div className="grid grid-cols-2 gap-3">
               {[
-                { val: true, label: 'DOĞRU' },
-                { val: false, label: 'YANLIŞ' },
+                { val: true, label: ui.trueLabel },
+                { val: false, label: ui.falseLabel },
               ].map((btn) => {
                 const isChosen = selectedBool === btn.val;
                 const isCorrect = currentQuestion.correctBool === btn.val;
@@ -669,7 +699,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                 }
                 return (
                   <button
-                    key={btn.label}
+                    key={String(btn.val)}
                     type="button"
                     disabled={hasAnswered}
                     onClick={() => {
@@ -689,7 +719,8 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           {currentQuestion.gameType === 'matching' && currentQuestion.pairs && (
             <div className="space-y-3">
               <p className="text-xs text-[var(--text-secondary)]">
-                Soldan bir kavram seçin, ardından sağdan doğru eşini tıklayın ({Object.keys(matchedPairs).length}/{currentQuestion.pairs.length} eşleşti).
+                {ui.matchingInstruction} ({Object.keys(matchedPairs).length}/{currentQuestion.pairs.length}{' '}
+                {ui.matchingMatchedSuffix})
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -702,7 +733,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                         type="button"
                         disabled={hasAnswered || isMatched}
                         onClick={() => setMatchSelectedLeft(p.id)}
-                        className={`w-full min-h-[46px] px-3.5 py-2 rounded-xl border text-left text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                        className={`w-full min-h-[46px] px-3.5 py-2 rounded-xl border text-start text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                           isMatched
                             ? 'bg-[#E6F2EC] dark:bg-[#132E22] border-[#0F5132] text-[#0F5132] dark:text-[#6EE7B7]'
                             : isActive
@@ -740,7 +771,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                             setMatchSelectedLeft(null);
                           }
                         }}
-                        className={`w-full min-h-[46px] px-3.5 py-2 rounded-xl border text-left text-xs sm:text-sm transition-colors cursor-pointer disabled:cursor-default ${
+                        className={`w-full min-h-[46px] px-3.5 py-2 rounded-xl border text-start text-xs sm:text-sm transition-colors cursor-pointer disabled:cursor-default ${
                           alreadyMatched
                             ? 'bg-[#E6F2EC] dark:bg-[#132E22] border-[#0F5132] text-[#0F5132] dark:text-[#6EE7B7]'
                             : matchSelectedLeft
@@ -756,7 +787,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
               </div>
               {matchMistakesCount > 0 && !hasAnswered && (
                 <p className="text-xs text-[#8C3B4A] dark:text-[#F9A8D4]">
-                  Yanlış eşleştirme denemesi: {matchMistakesCount}
+                  {ui.mistakes}: {matchMistakesCount}
                 </p>
               )}
             </div>
@@ -766,17 +797,16 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           {currentQuestion.gameType === 'word_order' && currentQuestion.orderedItems && (
             <div className="space-y-4">
               <p className="text-xs text-[var(--text-secondary)]">
-                {currentQuestion.orderDirectionLabel || 'Kelimelere sırayla tıklayarak cümleyi kurun:'}
+                {currentQuestion.orderDirectionLabel || ui.orderInstruction}
               </p>
 
-              {/* Target assembled tray */}
               <div
                 dir="rtl"
                 className="min-h-[60px] rounded-xl bg-[var(--bg-surface)] border-2 border-dashed border-[var(--border-strong)] p-3 flex flex-wrap gap-2 items-center"
               >
                 {orderSelected.length === 0 ? (
-                  <span className="text-xs text-[var(--text-muted)]" dir="ltr">
-                    Aşağıdaki kelimelere sırayla tıklayın...
+                  <span className="text-xs text-[var(--text-muted)]" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+                    {ui.orderInstruction}
                   </span>
                 ) : (
                   orderSelected.map((word, idx) => (
@@ -793,7 +823,6 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                 )}
               </div>
 
-              {/* Word Chip Bank */}
               <div dir="rtl" className="flex flex-wrap gap-2">
                 {shuffledWordChips.map((chip) => {
                   const usedCount = orderSelected.filter((w) => w === chip.word).length;
@@ -811,9 +840,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                       type="button"
                       disabled={hasAnswered || alreadyPicked}
                       onClick={() => setOrderSelected((prev) => [...prev, chip.word])}
-                      className={`font-arabic-inline text-lg px-3 py-1.5 rounded-xl border transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-default ${
-                        'bg-[var(--bg-card)] border-[var(--border-hairline)] hover:border-[var(--accent-navy)] text-[var(--text-primary)]'
-                      }`}
+                      className="font-arabic-inline text-lg px-3 py-1.5 rounded-xl border transition-colors cursor-pointer disabled:opacity-35 disabled:cursor-default bg-[var(--bg-card)] border-[var(--border-hairline)] hover:border-[var(--accent-navy)] text-[var(--text-primary)]"
                     >
                       {chip.word}
                     </button>
@@ -828,7 +855,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                     onClick={() => setOrderSelected([])}
                     className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-xs font-medium text-[var(--text-secondary)] cursor-pointer"
                   >
-                    Temizle
+                    {learnUi.flashcards.rateAgain}
                   </button>
                   <button
                     type="button"
@@ -841,7 +868,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                     }}
                     className="min-h-[38px] px-4 py-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold disabled:opacity-45 cursor-pointer"
                   >
-                    Sıralamayı Kontrol Et
+                    {ui.orderCheckBtn}
                   </button>
                 </div>
               )}
@@ -852,7 +879,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           {currentQuestion.gameType === 'isnad_order' && currentQuestion.orderedItems && (
             <div className="space-y-3">
               <p className="text-xs text-[var(--text-secondary)]">
-                {currentQuestion.orderDirectionLabel} · Yukarı/aşağı butonlarıyla sıralayın:
+                {currentQuestion.orderDirectionLabel || ui.orderInstruction}
               </p>
 
               <div className="space-y-2">
@@ -881,7 +908,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                             type="button"
                             disabled={idx === 0}
                             onClick={() => handleMoveIsnadItem(idx, -1)}
-                            aria-label={`${item} öğesini yukarı taşı`}
+                            aria-label={`${ui.orderMoveUpAria}: ${item}`}
                             className="p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] disabled:opacity-35 cursor-pointer"
                           >
                             <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -890,7 +917,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                             type="button"
                             disabled={idx === isnadDraft.length - 1}
                             onClick={() => handleMoveIsnadItem(idx, 1)}
-                            aria-label={`${item} öğesini aşağı taşı`}
+                            aria-label={`${ui.orderMoveDownAria}: ${item}`}
                             className="p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] disabled:opacity-35 cursor-pointer"
                           >
                             <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
@@ -913,7 +940,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                   }}
                   className="min-h-[40px] px-4 py-2 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold cursor-pointer"
                 >
-                  Zincir Sırasını Onayla
+                  {ui.orderCheckBtn}
                 </button>
               )}
             </div>
@@ -923,8 +950,9 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           {currentQuestion.gameType === 'city_map' && currentQuestion.targetCityId && (
             <CityMapQuestion
               targetCityId={currentQuestion.targetCityId}
-              answeredCityId={selectedCityId}
-              onSelectCity={(cid) => {
+              selectedCityId={selectedCityId}
+              revealed={hasAnswered}
+              onSelect={(cid) => {
                 setSelectedCityId(cid);
                 submitOutcome(cid === currentQuestion.targetCityId);
               }}
@@ -942,10 +970,14 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
-                  {isCurrentCorrect ? '✓ Doğru Cevap!' : '✕ Yanlış — Tekrar Listesine Eklendi'}
+                  {isCurrentCorrect
+                    ? `✓ ${ui.feedbackCorrect}`
+                    : timedOut
+                      ? `✕ ${ui.feedbackTimeout}`
+                      : `✕ ${ui.feedbackWrong}`}
                 </span>
                 <span className="text-[11px] font-medium text-[var(--text-muted)]">
-                  {currentQuestion.sourceRef}
+                  {ui.sourcePrefix} {currentQuestion.sourceRef}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed">
@@ -957,7 +989,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                     to={`/hadisler?hadith=${currentQuestion.hadithId}`}
                     className="text-xs font-medium text-[var(--accent-navy)] dark:text-[#93b8f9] hover:underline"
                   >
-                    Hadis #{currentQuestion.hadithId} sayfasında incele →
+                    {learnUi.flashcards.hadithPrefix} #{currentQuestion.hadithId} →
                   </Link>
                 ) : (
                   <span />
@@ -971,7 +1003,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                   }}
                   className="min-h-[40px] px-5 py-2 rounded-xl bg-[var(--accent-navy)] text-white text-xs sm:text-sm font-semibold cursor-pointer"
                 >
-                  {qIndex + 1 >= sessionQuestions.length ? 'Oturum Raporunu Gör' : 'Sonraki Soru'}
+                  {qIndex + 1 >= sessionQuestions.length ? ui.finishSessionBtn : ui.nextQuestionBtn}
                 </button>
               </div>
             </div>
@@ -986,11 +1018,10 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
           <Award className="w-11 h-11 text-[var(--accent-gold)] mx-auto" aria-hidden="true" />
           <div className="space-y-1">
             <h2 className="font-editorial text-3xl font-bold text-[var(--text-primary)]">
-              {timedMode && lives <= 0 ? 'Canlar Tükendi — Oturum Özeti' : 'Oturum Tamamlandı'}
+              {timedMode && lives <= 0 ? ui.summaryLivesOutTitle : ui.summaryDoneTitle}
             </h2>
             <p className="text-xs text-[var(--text-muted)]">
-              {CATEGORY_TABS.find((c) => c.id === category)?.label} ·{' '}
-              {GAME_TYPE_LABELS.find((g) => g.id === gameType)?.label}
+              {ui.categories[category]} · {ui.gameTypes[gameType]}
             </p>
           </div>
 
@@ -1000,37 +1031,37 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                 {sessionAnswered > 0 ? Math.round((sessionCorrect / sessionAnswered) * 100) : 0}%
               </div>
               <div className="text-[11px] text-[var(--text-muted)]">
-                {sessionCorrect}/{sessionAnswered} Doğru
+                {sessionCorrect}/{sessionAnswered} {ui.summaryCorrectLabel}
               </div>
             </div>
             <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] p-3">
               <div className="text-xl sm:text-2xl font-bold font-tabular text-[var(--accent-gold)]">
-                +{sessionXp} XP
+                +{sessionXp} {xpUnit}
               </div>
-              <div className="text-[11px] text-[var(--text-muted)]">Kazanılan XP</div>
+              <div className="text-[11px] text-[var(--text-muted)]">{ui.summaryEarnedXp}</div>
             </div>
             <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] p-3">
               <div className="text-xl sm:text-2xl font-bold font-tabular text-[var(--accent-navy)] dark:text-[#93b8f9]">
                 {maxComboSession}x
               </div>
-              <div className="text-[11px] text-[var(--text-muted)]">En Uzun Seri</div>
+              <div className="text-[11px] text-[var(--text-muted)]">{ui.summaryLongestCombo}</div>
             </div>
           </div>
 
           {sessionBadges.length > 0 && (
             <div className="rounded-xl bg-[var(--accent-gold-soft)]/75 border border-[var(--accent-gold)] p-3.5 space-y-1.5">
               <p className="text-xs font-bold text-[#875C10] dark:text-[var(--accent-gold)]">
-                ★ Bu Oturumda Kazanılan Rozetler
+                {ui.summaryUnlockedBadges}
               </p>
               <div className="flex flex-wrap justify-center gap-1.5">
                 {sessionBadges.map((bid) => {
-                  const def = BADGE_DEFS.find((d) => d.id === bid);
+                  const def = getLocalizedBadge(bid, lang, learnPack);
                   return (
                     <span
                       key={bid}
                       className="rounded-lg bg-[var(--bg-card)] border border-[var(--accent-gold)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]"
                     >
-                      {def?.titleTr || bid}
+                      {def.title}
                     </span>
                   );
                 })}
@@ -1045,7 +1076,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
               className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[var(--accent-navy)] text-white text-sm font-semibold inline-flex items-center gap-2 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" aria-hidden="true" />
-              <span>Yeni Oturum Başlat</span>
+              <span>{ui.summaryNewSessionBtn}</span>
             </button>
             {gamification.mistakeIds.length > 0 && (
               <button
@@ -1053,7 +1084,7 @@ export const QuizArena: React.FC<QuizArenaProps> = ({
                 onClick={() => restartSession({ mistakes: true, cat: 'all', gt: 'all', len: 'all' })}
                 className="min-h-[44px] px-5 py-2.5 rounded-xl bg-[#8C3B4A] text-white text-sm font-semibold cursor-pointer"
               >
-                Yanlışları Tekrar Çalış ({gamification.mistakeIds.length})
+                {ui.summaryRetryMistakesBtn} ({gamification.mistakeIds.length})
               </button>
             )}
           </div>

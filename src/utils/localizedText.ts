@@ -87,7 +87,7 @@ export function normalizeTransliterationSearch(raw: string): string {
     )
     .replace(/lului|loulou|lulu|لؤلؤي/g, 'lului')
     .replace(/muaz|muadh|moadh|muad|معاذ/g, 'muaz')
-    .replace(/hattabi|khattabi|al-?khattabi|خطابي/g, 'hattabi')
+    .replace(/hattabi|khattabi|chattabi|al-?khattabi|al-?chattabi|خطابي/g, 'hattabi')
     .replace(/ou/g, 'u')
     .replace(/dsch|dzj|dj/g, 'c')
     .replace(/sch/g, 's')

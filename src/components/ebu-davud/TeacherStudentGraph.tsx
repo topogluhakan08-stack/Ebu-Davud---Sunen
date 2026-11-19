@@ -4,6 +4,7 @@ import type { NetworkLink, NetworkNode } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { ManuscriptCard } from '../ui/Card';
 import { SpeechControls } from '../tts/SpeechControls';
+import { getLocalizedEbuDavudUi } from '../../utils/articleTranslations';
 
 interface TeacherStudentGraphProps {
   nodes: NetworkNode[];
@@ -13,8 +14,9 @@ interface TeacherStudentGraphProps {
 type CategoryFilter = 'all' | 'fiqh_master' | 'teacher' | 'family' | 'student';
 
 export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes, links }) => {
-  const { settings } = useApp();
+  const { settings, articlePack } = useApp();
   const isDark = settings.theme === 'dark';
+  const ui = getLocalizedEbuDavudUi(settings.language, articlePack).networkGraph;
 
   const [filter, setFilter] = useState<CategoryFilter>('all');
   const [selectedNodeId, setSelectedNodeId] = useState<string>('ebu-davud');
@@ -27,13 +29,7 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
     student: isDark ? '#E09250' : '#A0522D',
   };
 
-  const categoryLabels: Record<NetworkNode['category'], string> = {
-    center: 'Merkez Müellif',
-    fiqh_master: 'Üç Büyük Üstadı',
-    teacher: 'Hadis Hocaları',
-    family: 'Aile',
-    student: 'Talebeleri',
-  };
+  const categoryLabels = ui.categories;
 
   const visibleNodes = useMemo(() => {
     if (filter === 'all') return nodes;
@@ -146,12 +142,14 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
   );
 
   const filterButtons: { id: CategoryFilter; label: string }[] = [
-    { id: 'all', label: 'Tümü' },
-    { id: 'fiqh_master', label: 'Üç Büyük Üstadı' },
-    { id: 'teacher', label: 'Hocaları' },
-    { id: 'family', label: 'Aile' },
-    { id: 'student', label: 'Talebeleri' },
+    { id: 'all', label: ui.filterAll },
+    { id: 'fiqh_master', label: ui.filterMasters },
+    { id: 'teacher', label: ui.filterTeachers },
+    { id: 'family', label: ui.filterFamily },
+    { id: 'student', label: ui.filterStudents },
   ];
+
+  const selectedNarration = `${selectedNode.label}. ${selectedNode.roleTr}. ${selectedNode.detailTr}`;
 
   return (
     <div className="space-y-5">
@@ -177,12 +175,15 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
 
       {/* Graph Canvas + Node Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-8 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-card)] p-4 overflow-x-auto">
+        <div
+          dir="ltr"
+          className="lg:col-span-8 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-card)] p-4 overflow-x-auto"
+        >
           <svg
             viewBox="0 0 980 580"
             className="w-full min-w-[660px] h-auto select-none"
             role="img"
-            aria-label="Ebû Dâvûd Hoca-Talebe İlim Ağı"
+            aria-label={ui.svgAria}
           >
             {/* Ring guide ellipse */}
             <ellipse
@@ -264,7 +265,7 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
                       fontSize={12}
                       fontWeight={700}
                     >
-                      ED
+                      {ui.centerInitials}
                     </text>
                   )}
                   <text
@@ -297,7 +298,7 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
               <h3 className="text-2xl font-bold text-[var(--text-primary)] mt-1">
                 {selectedNode.label}
               </h3>
-              {selectedNode.nameAr && (
+              {selectedNode.nameAr && settings.language !== 'ar' && (
                 <p
                   className="font-arabic-inline text-xl text-[var(--accent-navy)] dark:text-[var(--accent-gold)] mt-1"
                   dir="rtl"
@@ -318,7 +319,7 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
             {selectedRelations.length > 0 && (
               <div className="pt-3 border-t border-[var(--border-hairline)] space-y-1.5">
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Bağlantılar ({selectedRelations.length})
+                  {ui.connectionsHeading} ({selectedRelations.length})
                 </p>
                 <div className="max-h-32 overflow-y-auto space-y-1 text-xs text-[var(--text-secondary)]">
                   {selectedRelations.slice(0, 6).map((rel) => {
@@ -330,7 +331,7 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
                         key={`${rel.source}-${rel.target}`}
                         type="button"
                         onClick={() => setSelectedNodeId(otherId)}
-                        className="block w-full text-left py-1 hover:text-[var(--text-primary)] underline-offset-2 hover:underline cursor-pointer"
+                        className="block w-full text-start py-1 hover:text-[var(--text-primary)] underline-offset-2 hover:underline cursor-pointer"
                       >
                         {other?.label} — {rel.relationTr}
                       </button>
@@ -345,7 +346,8 @@ export const TeacherStudentGraph: React.FC<TeacherStudentGraphProps> = ({ nodes,
             <SpeechControls
               id={`network-${selectedNode.id}`}
               compact
-              turkishText={`${selectedNode.label}. ${selectedNode.roleTr}. ${selectedNode.detailTr}`}
+              arabicText={settings.language === 'ar' ? selectedNarration : undefined}
+              primaryText={settings.language === 'ar' ? undefined : selectedNarration}
             />
           </div>
         </ManuscriptCard>

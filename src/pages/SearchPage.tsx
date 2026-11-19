@@ -5,20 +5,30 @@ import { useApp } from '../context/AppContext';
 import { runGlobalSearch, type SearchResultCategory } from '../utils/globalSearch';
 import { ManuscriptCard } from '../components/ui/Card';
 
-const SUGGESTIONS = [
-  'غضب',
-  'رفق',
-  'أعوذ',
-  'حلم',
-  '4750',
-  'Hattâbî',
-  'Basra',
-  'Mürsel',
-  'Muâz',
-];
+import type { LanguageCode } from '../types';
+
+const SUGGESTIONS_BY_LANG: Record<LanguageCode, string[]> = {
+  tr: ['غضب', 'رفق', 'أعوذ', 'حلم', '4750', 'Hattâbî', 'Basra', 'Mürsel', 'Muâz'],
+  fr: ['غضب', 'رفق', 'أعوذ', 'حلم', '4750', 'al-Khattabi', 'Basra', 'Mursal', 'Muadh'],
+  de: ['غضب', 'رفق', 'أعوذ', 'حلم', '4750', 'al-Khattabi', 'Basra', 'Mursal', 'Muadh'],
+  nl: ['غضب', 'رفق', 'أعوذ', 'حلم', '4750', 'al-Khattabi', 'Basra', 'Mursal', 'Muadh'],
+  ar: ['غضب', 'رفق', 'أعوذ', 'حلم', '4750', 'الخطابي', 'البصرة', 'مرسل', 'معاذ'],
+};
 
 export const SearchPage: React.FC = () => {
-  const { t } = useApp();
+  const {
+    settings,
+    t,
+    hadithPack,
+    secondaryHadithPack,
+    glossaryPack,
+    secondaryGlossaryPack,
+    wordLexiconPack,
+    secondaryWordLexiconPack,
+    articlePack,
+    secondaryArticlePack,
+  } = useApp();
+  const suggestions = SUGGESTIONS_BY_LANG[settings.language] ?? SUGGESTIONS_BY_LANG.tr;
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [category, setCategory] = useState<SearchResultCategory>('all');
@@ -46,7 +56,34 @@ export const SearchPage: React.FC = () => {
     setSearchParams(next, { replace: true });
   };
 
-  const allMatches = useMemo(() => runGlobalSearch(query, 'all', 120), [query]);
+  const allMatches = useMemo(
+    () =>
+      runGlobalSearch(query, 'all', 120, {
+        language: settings.language,
+        hadithPack,
+        secondaryHadithPack,
+        glossaryPack,
+        secondaryGlossaryPack,
+        wordLexiconPack,
+        secondaryWordLexiconPack,
+        articlePack,
+        secondaryArticlePack,
+        missingFallback: t.common.translationPreparing,
+      }),
+    [
+      query,
+      settings.language,
+      hadithPack,
+      secondaryHadithPack,
+      glossaryPack,
+      secondaryGlossaryPack,
+      wordLexiconPack,
+      secondaryWordLexiconPack,
+      articlePack,
+      secondaryArticlePack,
+      t.common.translationPreparing,
+    ]
+  );
 
   const results = useMemo(
     () => (category === 'all' ? allMatches : allMatches.filter((r) => r.category === category)),
@@ -94,7 +131,7 @@ export const SearchPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-[var(--text-muted)]">{t.searchPage.suggestionsLabel}</span>
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s}
               type="button"

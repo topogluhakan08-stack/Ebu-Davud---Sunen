@@ -146,6 +146,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+html[dir='rtl'] .font-tabular {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

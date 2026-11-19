@@ -9,13 +9,17 @@ import { Button } from '../ui/Button';
 import { StatusBadge } from '../ui/Badge';
 import { SpeechControls } from '../tts/SpeechControls';
 
+import { getLocalizedSunenUi } from '../../utils/articleTranslations';
+
 interface EditionsMapProps {
   cities: SunenPrintCity[];
 }
 
 export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
-  const { settings } = useApp();
+  const { settings, articlePack } = useApp();
   const isDark = settings.theme === 'dark';
+  const ui = getLocalizedSunenUi(settings.language, articlePack).editionsMap;
+  const popupDir = settings.language === 'ar' ? 'rtl' : 'ltr';
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -67,9 +71,9 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
       const marker = L.marker([city.lat, city.lng], { icon })
         .addTo(map)
         .bindPopup(
-          `<div style="min-width:170px;font-family:sans-serif;">
+          `<div dir="${popupDir}" style="min-width:170px;font-family:sans-serif;">
             <strong style="font-size:14px;">${city.order}. ${city.cityTr}</strong><br/>
-            <span style="font-size:12px;color:#57534e;">${city.countryTr} · ${city.editions.length} neşir kaydı</span>
+            <span style="font-size:12px;color:#57534e;">${city.countryTr} · ${city.editions.length} ${ui.popupRecordsSuffix}</span>
           </div>`
         );
 
@@ -90,9 +94,9 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
       mapRef.current = null;
       markersRef.current = {};
     };
-  }, [orderedCities]);
+  }, []);
 
-  // Update active marker & pan smoothly
+  // Update active marker, refresh localized popups & pan smoothly
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedCity) return;
@@ -113,6 +117,12 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
           iconAnchor: [14, 14],
         })
       );
+      marker.setPopupContent(
+        `<div dir="${popupDir}" style="min-width:170px;font-family:sans-serif;">
+          <strong style="font-size:14px;">${city.order}. ${city.cityTr}</strong><br/>
+          <span style="font-size:12px;color:#57534e;">${city.countryTr} · ${city.editions.length} ${ui.popupRecordsSuffix}</span>
+        </div>`
+      );
     });
 
     if (settings.reducedMotion) {
@@ -122,7 +132,7 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
     } else {
       map.panTo([selectedCity.lat, selectedCity.lng], { animate: true, duration: 0.6 });
     }
-  }, [selectedCity, orderedCities, isDark, settings.reducedMotion]);
+  }, [selectedCity, orderedCities, isDark, settings.reducedMotion, popupDir, ui.popupRecordsSuffix]);
 
   const handleReset = () => {
     setSelectedId(orderedCities[0].id);
@@ -130,6 +140,10 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
       mapRef.current.fitBounds(boundsRef.current, { padding: [36, 36] });
     }
   };
+
+  const selectedNarration = selectedCity
+    ? `${selectedCity.cityTr}. ${selectedCity.highlightTr} ${ui.editionsSpeechPrefix} ${selectedCity.editions.join('; ')}`
+    : '';
 
   return (
     <div className="space-y-5">
@@ -140,10 +154,10 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
           onClick={handleReset}
           iconLeft={<RotateCcw className="w-4 h-4" />}
         >
-          Tüm 8 Merkezi Göster
+          {ui.resetAllBtn}
         </Button>
 
-        <StatusBadge variant="extra" label="Ek açıklama · Koordinatlar coğrafî konum içindir" />
+        <StatusBadge variant="extra" label={ui.coordBadge} />
       </div>
 
       {/* Balanced 12-col split */}
@@ -152,7 +166,7 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
           <div
             ref={mapContainerRef}
             className="w-full h-[380px] lg:h-full lg:min-h-[440px]"
-            aria-label="es-Sünen neşir ve baskı merkezleri haritası"
+            aria-label={ui.mapAria}
           />
         </div>
 
@@ -165,19 +179,21 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-tabular text-[var(--text-secondary)]">
-                    Neşir Merkezi {selectedCity.order} / {orderedCities.length} ·{' '}
+                    {ui.centerLabel} {selectedCity.order} / {orderedCities.length} ·{' '}
                     {selectedCity.countryTr}
                   </p>
                   <h3 className="text-2xl font-bold text-[var(--text-primary)] mt-1">
                     {selectedCity.cityTr}
                   </h3>
                 </div>
-                <span
-                  className="font-arabic-inline text-2xl font-bold text-[var(--accent-navy)] dark:text-[var(--accent-gold)]"
-                  dir="rtl"
-                >
-                  {selectedCity.cityAr}
-                </span>
+                {settings.language !== 'ar' && (
+                  <span
+                    className="font-arabic-inline text-2xl font-bold text-[var(--accent-navy)] dark:text-[var(--accent-gold)]"
+                    dir="rtl"
+                  >
+                    {selectedCity.cityAr}
+                  </span>
+                )}
               </div>
 
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
@@ -186,7 +202,7 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
 
               <div className="space-y-2 pt-2 border-t border-[var(--border-hairline)]">
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Baskılar ve Tahkikli Neşirler ({selectedCity.editions.length})
+                  {ui.editionsHeading} ({selectedCity.editions.length})
                 </p>
                 <ul className="space-y-2">
                   {selectedCity.editions.map((ed) => (
@@ -209,7 +225,8 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
               <SpeechControls
                 id={`print-city-${selectedCity.id}`}
                 compact
-                turkishText={`${selectedCity.cityTr}. ${selectedCity.highlightTr} Baskılar: ${selectedCity.editions.join('; ')}`}
+                arabicText={settings.language === 'ar' ? selectedNarration : undefined}
+                primaryText={settings.language === 'ar' ? undefined : selectedNarration}
               />
             </div>
           </ManuscriptCard>
@@ -226,14 +243,14 @@ export const EditionsMap: React.FC<EditionsMapProps> = ({ cities }) => {
               type="button"
               onClick={() => setSelectedId(city.id)}
               aria-pressed={active}
-              className={`min-h-[44px] px-3 py-2 rounded-xl border text-left transition-colors cursor-pointer ${
+              className={`min-h-[44px] px-3 py-2 rounded-xl border text-start transition-colors cursor-pointer ${
                 active
                   ? 'bg-[var(--accent-navy)] text-white border-[var(--accent-navy)]'
                   : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-hairline)] hover:bg-[var(--bg-surface)]'
               }`}
             >
               <span className="block text-[10px] font-tabular opacity-80">
-                0{city.order} · {city.editions.length} baskı
+                0{city.order} · {city.editions.length} {ui.stripEditionUnit}
               </span>
               <span className="block text-xs font-semibold truncate">{city.cityTr}</span>
             </button>

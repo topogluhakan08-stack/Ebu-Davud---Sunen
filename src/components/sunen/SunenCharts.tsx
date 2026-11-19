@@ -16,6 +16,8 @@ import type { SunenEditionStats } from '../../types';
 import { ManuscriptCard } from '../ui/Card';
 import { SpeechControls } from '../tts/SpeechControls';
 
+import { formatLocaleNumber, getLocalizedSunenUi } from '../../utils/articleTranslations';
+
 interface SunenChartsProps {
   totalWritten: number;
   selectedInSunen: number;
@@ -26,47 +28,38 @@ interface SunenChartsProps {
 
 type EditionMetric = 'hadiths' | 'babs' | 'books';
 
-const METRIC_META: Record<
-  EditionMetric,
-  { label: string; unit: string; shortLabel: string; domain: [number, number] }
-> = {
-  hadiths: {
-    label: 'Hadis Sayısı',
-    unit: 'hadis',
-    shortLabel: 'Hadis',
-    domain: [4500, 5400],
-  },
-  babs: {
-    label: 'Bab Sayısı',
-    unit: 'bab',
-    shortLabel: 'Bab',
-    domain: [1800, 1920],
-  },
-  books: {
-    label: 'Kitap Sayısı',
-    unit: 'kitap',
-    shortLabel: 'Kitap',
-    domain: [30, 45],
-  },
-};
-
-const SHORT_EDITION_LABELS: Record<string, string> = {
-  wensinck: 'Wensinck',
-  abdulhamid: 'M. Abdülhamîd',
-  avvame: 'M. Avvâme',
-  liechtenstein: 'Liechtenstein',
-};
-
 export const SunenCharts: React.FC<SunenChartsProps> = ({
   totalWritten,
   selectedInSunen,
   murselApprox,
-  elMerasilApprox,
   editions,
 }) => {
-  const { settings } = useApp();
+  const { settings, articlePack } = useApp();
   const isDark = settings.theme === 'dark';
+  const lang = settings.language;
+  const ui = getLocalizedSunenUi(lang, articlePack).charts;
   const [metric, setMetric] = useState<EditionMetric>('hadiths');
+
+  const metricMeta: Record<
+    EditionMetric,
+    { label: string; unit: string; domain: [number, number] }
+  > = {
+    hadiths: {
+      label: ui.metricHadiths,
+      unit: ui.unitHadith,
+      domain: [4500, 5400],
+    },
+    babs: {
+      label: ui.metricBabs,
+      unit: ui.unitBab,
+      domain: [1800, 1920],
+    },
+    books: {
+      label: ui.metricBooks,
+      unit: ui.unitBook,
+      domain: [30, 45],
+    },
+  };
 
   const axisColor = isDark ? '#c4bdb0' : '#57534e';
   const gridColor = isDark ? '#2c374c' : '#dfd6c3';
@@ -81,17 +74,17 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
   const nonMursel = selectedInSunen - murselApprox;
   const murselData = useMemo(
     () => [
-      { name: 'Müsned & Muttasıl Hadisler', value: nonMursel, color: navyColor },
-      { name: 'Mürsel Rivayetler (~600)', value: murselApprox, color: goldColor },
+      { name: ui.musnadSliceName, value: nonMursel, color: navyColor },
+      { name: ui.murselSliceName, value: murselApprox, color: goldColor },
     ],
-    [nonMursel, murselApprox, navyColor, goldColor]
+    [ui.musnadSliceName, ui.murselSliceName, nonMursel, murselApprox, navyColor, goldColor]
   );
 
   const barData = useMemo(
     () =>
       editions.map((ed, idx) => ({
         id: ed.id,
-        name: SHORT_EDITION_LABELS[ed.id] || ed.editionName,
+        name: ui.shortLabels[ed.id] || ed.editionName,
         fullName: ed.editionName,
         value: ed[metric],
         books: ed.books,
@@ -99,62 +92,63 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
         hadiths: ed.hadiths,
         fill: [navyColor, emeraldColor, goldColor, isDark ? '#60a5fa' : '#1d396b'][idx % 4],
       })),
-    [editions, metric, navyColor, emeraldColor, goldColor, isDark]
+    [editions, metric, ui.shortLabels, navyColor, emeraldColor, goldColor, isDark]
   );
 
-  const selectionRatio = ((selectedInSunen / totalWritten) * 100).toFixed(2);
-  const murselRatio = ((murselApprox / selectedInSunen) * 100).toFixed(1);
-
-  const narrationTr = `Ebû Dâvûd hayatı boyunca yazdığı ${totalWritten.toLocaleString('tr-TR')} hadisten ${selectedInSunen.toLocaleString('tr-TR')} ahkâm hadisini es-Sünen'e seçmiştir; bu oran yaklaşık yüzde ${selectionRatio}'dır. Seçilen 4.800 hadisten yaklaşık ${murselApprox} tanesi mürseldir ve el-Merâsîl kitabındaki ${elMerasilApprox}'e yakın rivayet es-Sünen'in tekmilesi niteliğindedir. Neşirlere göre Wensinck'te 40 kitap, 1.889 bab, 4.800 hadis; Muhammed Muhyiddin Abdülhamîd neşrinde 35 kitap, 1.871 bab, 5.274 hadis; Muhammed Avvâme neşrinde 36 kitap, 1.850 bab, 5.232 hadis; Cem'iyyetü'l-merkezi'l-İslâmî Liechtenstein neşrinde ise 42 kitap, 1.885 bab ve 5.276 hadis yer alır.`;
-
-  const activeMetric = METRIC_META[metric];
+  const activeMetric = metricMeta[metric];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[var(--text-secondary)] max-w-3xl">
-          500.000 rivayetten 4.800 hadise süzülme oranını, mürsel dağılımını ve dört temel neşrin
-          kitap–bab–hadis sayılarını etkileşimli grafiklerle karşılaştırın.
-        </p>
-        <SpeechControls id="sunen-charts-narration" compact turkishText={narrationTr} />
+        <p className="text-sm text-[var(--text-secondary)] max-w-3xl">{ui.intro}</p>
+        <SpeechControls
+          id="sunen-charts-narration"
+          compact
+          arabicText={lang === 'ar' ? ui.narration : undefined}
+          primaryText={lang === 'ar' ? undefined : ui.narration}
+        />
       </div>
 
       {/* Top Grid: 500.000 -> 4.800 Funnel + Mürsel Pie */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <ManuscriptCard accentColor="var(--accent-navy)" className="lg:col-span-6 p-6 flex flex-col justify-between gap-5">
+        <ManuscriptCard
+          accentColor="var(--accent-navy)"
+          className="lg:col-span-6 p-6 flex flex-col justify-between gap-5"
+        >
           <div className="space-y-2">
             <p className="text-xs font-medium text-[var(--accent-navy)] dark:text-[#8cb3f7]">
-              Eleme ve Seçme Oranı · ~%{selectionRatio}
+              {ui.funnelKicker}
             </p>
-            <h3 className="text-xl font-bold text-[var(--text-primary)]">
-              500.000 Hadisten 4.800 Ahkâm Hadisine Süzülme
-            </h3>
+            <h3 className="text-xl font-bold text-[var(--text-primary)]">{ui.funnelHeading}</h3>
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Senedinde kopukluk bulunmayan ve râvilerinin zayıflığında ittifak edilmeyen ahkâm
-              rivayetlerinin seçimi.
+              {ui.funnelSubtitle}
             </p>
           </div>
 
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-tabular">
-                <span className="text-[var(--text-secondary)]">Hayatı boyunca yazdığı hadis</span>
-                <span className="font-bold text-[var(--text-primary)]">500.000</span>
+                <span className="text-[var(--text-secondary)]">{ui.writtenRowLabel}</span>
+                <span className="font-bold text-[var(--text-primary)]">
+                  {formatLocaleNumber(totalWritten, lang)}
+                </span>
               </div>
               <div className="min-h-[30px] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] p-1 flex items-center">
                 <div
                   className="min-h-[22px] rounded-lg flex items-center px-3 py-0.5 text-[11px] font-tabular font-semibold text-white"
                   style={{ width: '100%', backgroundColor: navyColor }}
                 >
-                  %100 · Toplam Hadis Birikimi
+                  {ui.totalAccumulationBar}
                 </div>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-tabular">
-                <span className="text-[var(--text-secondary)]">es-Sünen’e seçilen ahkâm hadisi</span>
-                <span className="font-bold text-[var(--accent-emerald)]">4.800</span>
+                <span className="text-[var(--text-secondary)]">{ui.selectedRowLabel}</span>
+                <span className="font-bold text-[var(--accent-emerald)]">
+                  {formatLocaleNumber(selectedInSunen, lang)}
+                </span>
               </div>
               <div className="min-h-[30px] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-1.5 py-1 flex items-center gap-2">
                 <div
@@ -162,17 +156,17 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
                   style={{ width: '4%', minWidth: '14px', backgroundColor: emeraldColor }}
                 />
                 <span className="text-[11px] font-tabular font-semibold text-[var(--text-primary)] leading-snug">
-                  %{selectionRatio} seçki oranı (yaklaşık 104 rivayetten 1’i)
+                  {ui.selectionRatioNote}
                 </span>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs font-tabular">
-                <span className="text-[var(--text-secondary)]">
-                  es-Sünen içindeki mürsel &amp; el-Merâsîl ilişkisi
+                <span className="text-[var(--text-secondary)]">{ui.murselRowLabel}</span>
+                <span className="font-bold text-[var(--accent-gold)]">
+                  ~{formatLocaleNumber(murselApprox, lang)}
                 </span>
-                <span className="font-bold text-[var(--accent-gold)]">~600</span>
               </div>
               <div className="min-h-[30px] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-1.5 py-1 flex items-center gap-2">
                 <div
@@ -180,34 +174,28 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
                   style={{ width: '12.5%', backgroundColor: goldColor }}
                 />
                 <span className="text-[11px] font-tabular text-[var(--text-secondary)] leading-snug">
-                  4.800 içinde ~%{murselRatio} mürsel · el-Merâsîl tekmilesi (~{elMerasilApprox})
+                  {ui.murselRatioNote}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-xs text-[var(--text-secondary)] leading-relaxed">
-            <strong className="text-[var(--text-primary)]">Nüsha Delili:</strong> Köprülü Ktp.,
-            nr. 363 ve bazı <em>es-Sünen</em> yazmalarının sonundaki{' '}
-            <span className="italic text-[var(--text-primary)]">
-              “Hâzâ âhirü’l-merâsîl min Kitâbi’s-Sünen”
-            </span>{' '}
-            kaydı, <em>el-Merâsîl</em>’in <em>es-Sünen</em>’in tamamlayıcısı (tekmilesi) olduğunu
-            gösterir.
+            <strong className="text-[var(--text-primary)]">{ui.manuscriptEvidenceLabel}</strong>{' '}
+            {ui.manuscriptEvidenceBody}
           </div>
         </ManuscriptCard>
 
-        <ManuscriptCard accentColor="var(--accent-gold)" className="lg:col-span-6 p-6 flex flex-col justify-between gap-4">
+        <ManuscriptCard
+          accentColor="var(--accent-gold)"
+          className="lg:col-span-6 p-6 flex flex-col justify-between gap-4"
+        >
           <div className="space-y-1">
-            <p className="text-xs font-medium text-[var(--accent-gold)]">
-              4.800 İçinde Mürsel Dağılımı
-            </p>
-            <h3 className="text-xl font-bold text-[var(--text-primary)]">
-              Müsned ve Mürsel Rivayet Oranı
-            </h3>
+            <p className="text-xs font-medium text-[var(--accent-gold)]">{ui.pieKicker}</p>
+            <h3 className="text-xl font-bold text-[var(--text-primary)]">{ui.pieHeading}</h3>
           </div>
 
-          <div className="w-full h-[240px]" data-testid="mursel-pie-chart">
+          <div className="w-full h-[240px]" dir="ltr" data-testid="mursel-pie-chart">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -226,8 +214,8 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
                 </Pie>
                 <Tooltip
                   formatter={(value) => [
-                    `${Number(value ?? 0).toLocaleString('tr-TR')} hadis`,
-                    'Sayı',
+                    `${formatLocaleNumber(Number(value ?? 0), lang)} ${ui.unitHadith}`,
+                    ui.tooltipCountLabel,
                   ]}
                   contentStyle={{
                     backgroundColor: tooltipBg,
@@ -256,7 +244,7 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
                   <span>{item.name}</span>
                 </span>
                 <span className="font-tabular font-bold text-[var(--text-primary)]">
-                  {item.value.toLocaleString('tr-TR')}
+                  {formatLocaleNumber(item.value, lang)}
                 </span>
               </div>
             ))}
@@ -268,17 +256,15 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
       <ManuscriptCard accentColor="var(--accent-emerald)" className="p-6 sm:p-8 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-xs font-medium text-[var(--accent-emerald)]">
-              Neşirlere Göre Sayısal Farklar
-            </p>
+            <p className="text-xs font-medium text-[var(--accent-emerald)]">{ui.barKicker}</p>
             <h3 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
-              Dört Temel Neşirde Kitap, Bab ve Hadis Sayıları
+              {ui.barHeading}
             </h3>
           </div>
 
           <div
             role="group"
-            aria-label="Karşılaştırma ölçütü seçin"
+            aria-label={ui.metricGroupAria}
             className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)]"
           >
             {(['hadiths', 'babs', 'books'] as EditionMetric[]).map((key) => {
@@ -295,19 +281,16 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  {METRIC_META[key].label}
+                  {metricMeta[key].label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="w-full h-[290px]" data-testid="editions-bar-chart">
+        <div className="w-full h-[290px]" dir="ltr" data-testid="editions-bar-chart">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={barData}
-              margin={{ top: 12, right: 20, left: 8, bottom: 8 }}
-            >
+            <BarChart data={barData} margin={{ top: 12, right: 20, left: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
               <XAxis
                 dataKey="name"
@@ -324,7 +307,7 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
               />
               <Tooltip
                 formatter={(value) => [
-                  `${Number(value ?? 0).toLocaleString('tr-TR')} ${activeMetric.unit}`,
+                  `${formatLocaleNumber(Number(value ?? 0), lang)} ${activeMetric.unit}`,
                   activeMetric.label,
                 ]}
                 labelFormatter={(_label, payload) =>
@@ -349,33 +332,33 @@ export const SunenCharts: React.FC<SunenChartsProps> = ({
 
         {/* Clean Tabular Breakdown Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+          <table className="w-full text-start border-collapse text-sm">
             <thead>
               <tr className="border-b border-[var(--border-hairline)] text-xs text-[var(--text-secondary)]">
-                <th className="py-2.5 pr-4 font-semibold">Neşir / Sayım</th>
-                <th className="py-2.5 px-3 font-semibold">Tarih</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Kitap</th>
-                <th className="py-2.5 px-3 font-semibold text-right">Bab</th>
-                <th className="py-2.5 pl-3 font-semibold text-right">Hadis</th>
+                <th className="py-2.5 pe-4 font-semibold text-start">{ui.tableColEdition}</th>
+                <th className="py-2.5 px-3 font-semibold text-start">{ui.tableColYear}</th>
+                <th className="py-2.5 px-3 font-semibold text-end">{ui.tableColBooks}</th>
+                <th className="py-2.5 px-3 font-semibold text-end">{ui.tableColBabs}</th>
+                <th className="py-2.5 ps-3 font-semibold text-end">{ui.tableColHadiths}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-hairline)]">
               {editions.map((ed) => (
                 <tr key={ed.id} className="hover:bg-[var(--bg-surface)] transition-colors">
-                  <td className="py-3 pr-4 font-medium text-[var(--text-primary)]">
+                  <td className="py-3 pe-4 font-medium text-[var(--text-primary)]">
                     {ed.editionName}
                   </td>
                   <td className="py-3 px-3 text-xs font-tabular text-[var(--text-secondary)] whitespace-nowrap">
                     {ed.yearText}
                   </td>
-                  <td className="py-3 px-3 text-right font-tabular font-semibold text-[var(--text-primary)]">
-                    {ed.books}
+                  <td className="py-3 px-3 text-end font-tabular font-semibold text-[var(--text-primary)]">
+                    {formatLocaleNumber(ed.books, lang)}
                   </td>
-                  <td className="py-3 px-3 text-right font-tabular font-semibold text-[var(--text-primary)]">
-                    {ed.babs.toLocaleString('tr-TR')}
+                  <td className="py-3 px-3 text-end font-tabular font-semibold text-[var(--text-primary)]">
+                    {formatLocaleNumber(ed.babs, lang)}
                   </td>
-                  <td className="py-3 pl-3 text-right font-tabular font-bold text-[var(--accent-emerald)]">
-                    {ed.hadiths.toLocaleString('tr-TR')}
+                  <td className="py-3 ps-3 text-end font-tabular font-bold text-[var(--accent-emerald)]">
+                    {formatLocaleNumber(ed.hadiths, lang)}
                   </td>
                 </tr>
               ))}

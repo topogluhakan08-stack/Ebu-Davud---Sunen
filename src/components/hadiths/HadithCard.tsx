@@ -34,7 +34,20 @@ import {
   segmentArabicWithLexicon,
 } from '../../utils/arabic';
 import { splitIntoSentences } from '../../utils/audioManifest';
-import { getBabDisplayTitle, getLanguageMeta, getSpeechLangForUi } from '../../utils/localizedText';
+import { getLanguageMeta, getSpeechLangForUi } from '../../utils/localizedText';
+import {
+  formatPdfPage,
+  getLocalizedBab,
+  getLocalizedHadithContent,
+  localizeTahricBadge,
+} from '../../utils/hadithTranslations';
+import {
+  getLocalizedDerivativeMeaning,
+  getLocalizedNarratorBio,
+  getLocalizedPartOfSpeech,
+  getLocalizedWordGrammar,
+  getLocalizedWordMeaning,
+} from '../../utils/lexiconTranslations';
 import { ManuscriptCard } from '../ui/Card';
 import { StatusBadge } from '../ui/Badge';
 import { SpeechControls } from '../tts/SpeechControls';
@@ -52,20 +65,6 @@ interface HadithCardProps {
 
 type CardTab = 'text' | 'isnad' | 'footnotes' | 'note';
 
-function resolveHadithTextForLang(
-  hadith: HadithItem,
-  lang: LanguageCode,
-  missingText: string
-): { text: string; isMissing: boolean } {
-  if (lang === 'tr' && hadith.translationTr?.trim()) {
-    return { text: hadith.translationTr, isMissing: false };
-  }
-  if (lang === 'fr' && hadith.translationFr?.trim()) {
-    return { text: hadith.translationFr, isMissing: false };
-  }
-  return { text: missingText, isMissing: true };
-}
-
 export const HadithCard: React.FC<HadithCardProps> = ({
   hadith,
   bab,
@@ -76,6 +75,11 @@ export const HadithCard: React.FC<HadithCardProps> = ({
     progress,
     t,
     secondaryT,
+    hadithPack,
+    secondaryHadithPack,
+    glossaryPack,
+    wordLexiconPack,
+    secondaryWordLexiconPack,
     toggleRead,
     markListened,
     toggleMemorized,
@@ -174,9 +178,12 @@ export const HadithCard: React.FC<HadithCardProps> = ({
   };
 
   const getWordMeaningForLang = (w: WordAnalysis, lang: LanguageCode): string => {
-    if (lang === 'tr') return w.meaningTr;
-    if (lang === 'fr') return w.meaningFr;
-    return t.common.translationPreparing;
+    const pack = lang === settings.language ? wordLexiconPack : secondaryWordLexiconPack;
+    const fallback =
+      lang === settings.language
+        ? t.common.translationPreparing
+        : secondaryT?.common.translationPreparing || t.common.translationPreparing;
+    return getLocalizedWordMeaning(w, lang, pack, fallback);
   };
 
   const renderClickableToken = (
@@ -235,23 +242,25 @@ export const HadithCard: React.FC<HadithCardProps> = ({
     );
   };
 
-  const primaryTranslationResult = resolveHadithTextForLang(
+  const primaryContent = getLocalizedHadithContent(
     hadith,
     settings.language,
+    hadithPack,
     t.common.translationPreparing
   );
-  const primaryTranslation = primaryTranslationResult.text;
+  const primaryTranslation = primaryContent.translation;
 
   const hasSecondaryLang =
     settings.secondaryLanguage !== 'none' && settings.secondaryLanguage !== settings.language;
   const secondaryLangMeta = hasSecondaryLang
     ? getLanguageMeta(settings.secondaryLanguage as LanguageCode)
     : null;
-  const secondaryTranslationResult =
+  const secondaryContent =
     hasSecondaryLang && secondaryLangMeta
-      ? resolveHadithTextForLang(
+      ? getLocalizedHadithContent(
           hadith,
           secondaryLangMeta.code,
+          secondaryHadithPack,
           secondaryT?.common.translationPreparing || t.common.translationPreparing
         )
       : null;
@@ -269,7 +278,7 @@ export const HadithCard: React.FC<HadithCardProps> = ({
       ? sentences[activeSentenceIndex] || null
       : null;
 
-  const babTitle = getBabDisplayTitle(bab, settings.language);
+  const localizedBab = getLocalizedBab(bab, settings.language, hadithPack);
 
   return (
     <ManuscriptCard
@@ -296,11 +305,11 @@ export const HadithCard: React.FC<HadithCardProps> = ({
               </span>
 
               <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {bab.numberLabel}: {babTitle}
+                {localizedBab.numberLabel}: {localizedBab.title}
               </span>
 
               <span className="text-xs font-tabular text-[var(--text-muted)]">
-                · PDF s. {hadith.pdfPage}
+                · {formatPdfPage(hadith.pdfPage, settings.language)}
               </span>
 
               {showNeedsReview && (
@@ -311,7 +320,11 @@ export const HadithCard: React.FC<HadithCardProps> = ({
             {hadith.tahricBadges.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {hadith.tahricBadges.map((badge) => (
-                  <StatusBadge key={badge} variant="tahric" label={badge} />
+                  <StatusBadge
+                    key={badge}
+                    variant="tahric"
+                    label={localizeTahricBadge(badge, settings.language)}
+                  />
                 ))}
               </div>
             )}
@@ -377,7 +390,7 @@ export const HadithCard: React.FC<HadithCardProps> = ({
           arabicText={hadith.fullTextAr}
           turkishText={hadith.translationTr}
           frenchText={hadith.translationFr}
-          primaryText={!primaryTranslationResult.isMissing ? primaryTranslation : undefined}
+          primaryText={!primaryContent.isTranslationMissing ? primaryTranslation : undefined}
           onListenStart={() => markListened(hadith.id)}
           onAudioFinished={onAudioFinished}
           compact
@@ -517,7 +530,12 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                         {getWordMeaningForLang(hoveredWord, settings.language)}
                       </span>
                       <span className="text-[var(--text-muted)]">
-                        · {hoveredWord.partOfSpeech}
+                        ·{' '}
+                        {getLocalizedPartOfSpeech(
+                          hoveredWord.partOfSpeech,
+                          settings.language,
+                          wordLexiconPack
+                        )}
                         {hoveredWord.root && !hoveredWord.root.startsWith('—')
                           ? ` · ${t.hadithCard.rootLabel}: ${hoveredWord.root}`
                           : ''}
@@ -530,211 +548,241 @@ export const HadithCard: React.FC<HadithCardProps> = ({
               </div>
 
               {/* Inline Selected Word Detail Card */}
-              {selectedWord && (
-                <div
-                  className="root-hl-border rounded-2xl border-2 p-4 sm:p-5 bg-[var(--bg-card)] space-y-4 shadow-sm"
-                  style={getPaletteVars(selectedWord.rootColorIndex)}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span className="font-arabic-inline text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-                          {selectedWord.arabic}
-                        </span>
-                        <span className="text-sm font-medium text-[var(--text-secondary)]">
-                          [{selectedWord.transliteration}]
-                        </span>
-                        <span className="rounded-lg px-2 py-0.5 text-xs font-semibold bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-[var(--text-primary)]">
-                          {selectedWord.partOfSpeech}
-                        </span>
-                        <span
-                          className="root-hl-token rounded-lg px-2.5 py-0.5 text-xs font-bold border"
-                          style={getPaletteVars(selectedWord.rootColorIndex)}
-                        >
-                          {t.hadithCard.rootLabel}:{' '}
-                          <span className="font-arabic-inline text-sm">{selectedWord.root}</span>
-                        </span>
-                        {selectedWord.needs_review && (
-                          <StatusBadge variant="needs_review" label={t.hadithCard.wordReviewBadge} />
-                        )}
-                      </div>
-                      <p className="text-base font-semibold text-[var(--text-primary)] pt-0.5">
-                        {getWordMeaningForLang(selectedWord, settings.language)}
-                      </p>
-                      {hasSecondaryLang && secondaryLangMeta && (
-                        <p className="text-xs text-[var(--text-secondary)]">
-                          {secondaryLangMeta.shortLabel}:{' '}
-                          {getWordMeaningForLang(selectedWord, secondaryLangMeta.code)}
-                        </p>
-                      )}
-                    </div>
+              {selectedWord &&
+                (() => {
+                  const grammar = getLocalizedWordGrammar(
+                    selectedWord,
+                    settings.language,
+                    wordLexiconPack
+                  );
+                  const numberGenderText = [grammar.number, grammar.gender]
+                    .filter((x) => x && x !== '—')
+                    .join(' · ');
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          speak(selectedWord.arabic, 'ar-SA', { id: `word-${selectedWord.id}` })
-                        }
-                        className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-95 cursor-pointer"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>{t.hadithCard.buttons.listenWord}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedWordId(null)}
-                        className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] text-[var(--text-secondary)] text-xs font-medium hover:text-[var(--text-primary)] cursor-pointer"
-                      >
-                        {t.hadithCard.buttons.close}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sarf & Irab Structured Analysis */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div className="bg-[var(--bg-surface)] rounded-xl p-3.5 border border-[var(--border-hairline)] space-y-2">
-                      <span className="font-semibold text-[var(--text-muted)] block uppercase tracking-wider">
-                        {t.hadithCard.sarfTitle}
-                      </span>
-                      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[var(--text-primary)]">
-                        <div>
-                          <dt className="text-[11px] text-[var(--text-muted)]">
-                            {t.hadithCard.rootLabel}
-                          </dt>
-                          <dd className="font-arabic-inline text-sm font-bold">
-                            {selectedWord.sarf?.root || selectedWord.root}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt className="text-[11px] text-[var(--text-muted)]">
-                            {t.hadithCard.patternLabel}
-                          </dt>
-                          <dd className="font-medium">{selectedWord.sarf?.pattern || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-[11px] text-[var(--text-muted)]">
-                            {t.hadithCard.tenseLabel}
-                          </dt>
-                          <dd className="font-medium">{selectedWord.sarf?.tense || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-[11px] text-[var(--text-muted)]">
-                            {t.hadithCard.numberGenderLabel}
-                          </dt>
-                          <dd className="font-medium">
-                            {[selectedWord.sarf?.number, selectedWord.sarf?.gender]
-                              .filter((x) => x && x !== '—')
-                              .join(' · ') || '—'}
-                          </dd>
-                        </div>
-                      </dl>
-                    </div>
-
-                    <div className="bg-[var(--bg-surface)] rounded-xl p-3.5 border border-[var(--border-hairline)] space-y-2">
-                      <span className="font-semibold text-[var(--text-muted)] block uppercase tracking-wider">
-                        {t.hadithCard.irabTitle}
-                      </span>
-                      <div className="space-y-1 text-[var(--text-primary)]">
-                        <p>
-                          <span className="text-[var(--text-muted)]">{t.hadithCard.roleLabel}: </span>
-                          <strong>{selectedWord.irab?.role || selectedWord.morphology}</strong>
-                        </p>
-                        <p>
-                          <span className="text-[var(--text-muted)]">{t.hadithCard.caseLabel}: </span>
-                          <strong>{selectedWord.irab?.caseState || '—'}</strong>
-                        </p>
-                        {selectedWord.irab?.reason && (
-                          <p className="text-[var(--text-secondary)] leading-relaxed">
-                            <span className="text-[var(--text-muted)]">
-                              {t.hadithCard.reasonLabel}:{' '}
+                  return (
+                    <div
+                      className="root-hl-border rounded-2xl border-2 p-4 sm:p-5 bg-[var(--bg-card)] space-y-4 shadow-sm"
+                      style={getPaletteVars(selectedWord.rootColorIndex)}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span className="font-arabic-inline text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                              {selectedWord.arabic}
                             </span>
-                            {selectedWord.irab.reason}
+                            <span className="text-sm font-medium text-[var(--text-secondary)]">
+                              [{selectedWord.transliteration}]
+                            </span>
+                            {grammar.partOfSpeech && (
+                              <span className="rounded-lg px-2 py-0.5 text-xs font-semibold bg-[var(--bg-surface)] border border-[var(--border-hairline)] text-[var(--text-primary)]">
+                                {grammar.partOfSpeech}
+                              </span>
+                            )}
+                            <span
+                              className="root-hl-token rounded-lg px-2.5 py-0.5 text-xs font-bold border"
+                              style={getPaletteVars(selectedWord.rootColorIndex)}
+                            >
+                              {t.hadithCard.rootLabel}:{' '}
+                              <span className="font-arabic-inline text-sm">{selectedWord.root}</span>
+                            </span>
+                            {selectedWord.needs_review && (
+                              <StatusBadge
+                                variant="needs_review"
+                                label={t.hadithCard.wordReviewBadge}
+                              />
+                            )}
+                          </div>
+                          <p className="text-base font-semibold text-[var(--text-primary)] pt-0.5">
+                            {getWordMeaningForLang(selectedWord, settings.language)}
                           </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Narrator Bio & Direct Link to Isnad Tree */}
-                  {(selectedWord.isNarrator || selectedWord.isnadNodeId) && (
-                    <div className="rounded-xl bg-[var(--accent-navy-soft)]/50 border border-[var(--border-hairline)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1 text-xs">
-                        <div className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--accent-navy)] dark:text-[#93b8f9]">
-                          <UserCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                          <span>{t.hadithCard.narratorBioTitle}</span>
+                          {hasSecondaryLang && secondaryLangMeta && (
+                            <p
+                              dir={secondaryLangMeta.dir}
+                              className="text-xs text-[var(--text-secondary)]"
+                            >
+                              {secondaryLangMeta.shortLabel}:{' '}
+                              {getWordMeaningForLang(selectedWord, secondaryLangMeta.code)}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-[var(--text-primary)] leading-relaxed">
-                          {settings.language === 'tr'
-                            ? selectedWord.narratorBioTr || t.hadithCard.narratorBioMissing
-                            : selectedWord.narratorBioTr
-                              ? t.common.translationPreparing
-                              : t.hadithCard.narratorBioMissing}
-                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              speak(selectedWord.arabic, 'ar-SA', { id: `word-${selectedWord.id}` })
+                            }
+                            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-medium inline-flex items-center gap-1.5 hover:opacity-95 cursor-pointer"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
+                            <span>{t.hadithCard.buttons.listenWord}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedWordId(null)}
+                            className="min-h-[38px] px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface)] text-[var(--text-secondary)] text-xs font-medium hover:text-[var(--text-primary)] cursor-pointer"
+                          >
+                            {t.hadithCard.buttons.close}
+                          </button>
+                        </div>
                       </div>
-                      {selectedWord.isnadNodeId && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHighlightedChainNodeId(selectedWord.isnadNodeId!);
-                            setActiveTab('isnad');
-                          }}
-                          className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 hover:opacity-95 cursor-pointer"
-                        >
-                          <GitBranch className="w-3.5 h-3.5" aria-hidden="true" />
-                          <span>{t.hadithCard.showInIsnad}</span>
-                        </button>
+
+                      {/* Sarf & Irab Structured Analysis */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div className="bg-[var(--bg-surface)] rounded-xl p-3.5 border border-[var(--border-hairline)] space-y-2">
+                          <span className="font-semibold text-[var(--text-muted)] block uppercase tracking-wider">
+                            {t.hadithCard.sarfTitle}
+                          </span>
+                          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[var(--text-primary)]">
+                            <div>
+                              <dt className="text-[11px] text-[var(--text-muted)]">
+                                {t.hadithCard.rootLabel}
+                              </dt>
+                              <dd>
+                                <span className="font-arabic-inline text-sm font-bold" dir="rtl">
+                                  {selectedWord.sarf?.root || selectedWord.root}
+                                </span>
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-[11px] text-[var(--text-muted)]">
+                                {t.hadithCard.patternLabel}
+                              </dt>
+                              <dd className="font-medium">{grammar.pattern}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[11px] text-[var(--text-muted)]">
+                                {t.hadithCard.tenseLabel}
+                              </dt>
+                              <dd className="font-medium">{grammar.tense}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-[11px] text-[var(--text-muted)]">
+                                {t.hadithCard.numberGenderLabel}
+                              </dt>
+                              <dd className="font-medium">{numberGenderText || '—'}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        <div className="bg-[var(--bg-surface)] rounded-xl p-3.5 border border-[var(--border-hairline)] space-y-2">
+                          <span className="font-semibold text-[var(--text-muted)] block uppercase tracking-wider">
+                            {t.hadithCard.irabTitle}
+                          </span>
+                          <div className="space-y-1 text-[var(--text-primary)]">
+                            <p>
+                              <span className="text-[var(--text-muted)]">
+                                {t.hadithCard.roleLabel}:{' '}
+                              </span>
+                              <strong>{grammar.role}</strong>
+                            </p>
+                            <p>
+                              <span className="text-[var(--text-muted)]">
+                                {t.hadithCard.caseLabel}:{' '}
+                              </span>
+                              <strong>{grammar.caseState}</strong>
+                            </p>
+                            {grammar.reason && (
+                              <p className="text-[var(--text-secondary)] leading-relaxed">
+                                <span className="text-[var(--text-muted)]">
+                                  {t.hadithCard.reasonLabel}:{' '}
+                                </span>
+                                {grammar.reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Narrator Bio & Direct Link to Isnad Tree */}
+                      {(selectedWord.isNarrator || selectedWord.isnadNodeId) && (
+                        <div className="rounded-xl bg-[var(--accent-navy-soft)]/50 border border-[var(--border-hairline)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-1 text-xs">
+                            <div className="inline-flex items-center gap-1.5 font-bold uppercase tracking-wider text-[var(--accent-navy)] dark:text-[#93b8f9]">
+                              <UserCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>{t.hadithCard.narratorBioTitle}</span>
+                            </div>
+                            <p className="text-[var(--text-primary)] leading-relaxed">
+                              {selectedWord.narratorBioTr
+                                ? getLocalizedNarratorBio(
+                                    selectedWord.narratorBioTr,
+                                    settings.language,
+                                    glossaryPack,
+                                    t.common.translationPreparing
+                                  )
+                                : t.hadithCard.narratorBioMissing}
+                            </p>
+                          </div>
+                          {selectedWord.isnadNodeId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setHighlightedChainNodeId(selectedWord.isnadNodeId!);
+                                setActiveTab('isnad');
+                              }}
+                              className="min-h-[36px] px-3.5 py-1.5 rounded-xl bg-[var(--accent-navy)] text-white text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 hover:opacity-95 cursor-pointer"
+                            >
+                              <GitBranch className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>{t.hadithCard.showInIsnad}</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedWord.derivatives.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                            {t.hadithCard.derivativesTitle} ({selectedWord.derivatives.length})
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                            {selectedWord.derivatives.map((d) => {
+                              const derivPrimary = getLocalizedDerivativeMeaning(
+                                d,
+                                settings.language,
+                                wordLexiconPack,
+                                t.common.translationPreparing
+                              );
+                              const derivSecondary =
+                                hasSecondaryLang && secondaryLangMeta
+                                  ? getLocalizedDerivativeMeaning(
+                                      d,
+                                      secondaryLangMeta.code,
+                                      secondaryWordLexiconPack,
+                                      secondaryT?.common.translationPreparing ||
+                                        t.common.translationPreparing
+                                    )
+                                  : null;
+
+                              return (
+                                <div
+                                  key={d.ar}
+                                  className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/60 px-3 py-2 flex items-center justify-between gap-2"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-medium text-[var(--text-primary)]">
+                                      {derivPrimary}
+                                    </p>
+                                    {derivSecondary && (
+                                      <p
+                                        dir={secondaryLangMeta?.dir}
+                                        className="text-[11px] text-[var(--text-muted)]"
+                                      >
+                                        {derivSecondary}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="font-arabic-inline text-lg font-bold text-[var(--text-primary)] shrink-0">
+                                    {d.ar}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  )}
-
-                  {selectedWord.derivatives.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                        {t.hadithCard.derivativesTitle} ({selectedWord.derivatives.length})
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {selectedWord.derivatives.map((d) => {
-                          const derivPrimary =
-                            settings.language === 'tr'
-                              ? d.tr
-                              : settings.language === 'fr'
-                                ? d.fr
-                                : t.common.translationPreparing;
-                          const derivSecondary =
-                            hasSecondaryLang && secondaryLangMeta
-                              ? secondaryLangMeta.code === 'tr'
-                                ? d.tr
-                                : secondaryLangMeta.code === 'fr'
-                                  ? d.fr
-                                  : t.common.translationPreparing
-                              : null;
-
-                          return (
-                            <div
-                              key={d.ar}
-                              className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/60 px-3 py-2 flex items-center justify-between gap-2"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-[var(--text-primary)]">
-                                  {derivPrimary}
-                                </p>
-                                {derivSecondary && (
-                                  <p className="text-[11px] text-[var(--text-muted)]">
-                                    {derivSecondary}
-                                  </p>
-                                )}
-                              </div>
-                              <span className="font-arabic-inline text-lg font-bold text-[var(--text-primary)] shrink-0">
-                                {d.ar}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                  );
+                })()}
             </div>
 
             {/* Translation Block */}
@@ -778,12 +826,12 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                     : primaryTranslation}
                 </p>
 
-                {hasSecondaryLang && secondaryTranslationResult && showSecondaryTranslation && (
+                {hasSecondaryLang && secondaryContent && showSecondaryTranslation && (
                   <p
                     dir={secondaryLangMeta?.dir}
                     className="text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)] pt-2.5 border-t border-[var(--border-hairline)]"
                   >
-                    {secondaryTranslationResult.text}
+                    {secondaryContent.translation}
                   </p>
                 )}
               </div>
@@ -797,9 +845,9 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                         <Lightbulb className="w-4 h-4 shrink-0" aria-hidden="true" />
                         <span>{t.hadithCard.lessonsTitle}</span>
                       </div>
-                      {settings.language === 'tr' ? (
+                      {primaryContent.lessons.length > 0 ? (
                         <ul className="space-y-1.5 text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed">
-                          {hadith.lessonsTr.map((lesson, idx) => (
+                          {primaryContent.lessons.map((lesson, idx) => (
                             <li key={idx} className="flex items-start gap-2">
                               <span className="font-bold text-[var(--accent-emerald)]">•</span>
                               <span>{lesson}</span>
@@ -811,10 +859,26 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                           {t.common.translationPreparing}
                         </p>
                       )}
+                      {hasSecondaryLang &&
+                        showSecondaryTranslation &&
+                        secondaryContent &&
+                        secondaryContent.lessons.length > 0 && (
+                          <ul
+                            dir={secondaryLangMeta?.dir}
+                            className="space-y-1 text-xs text-[var(--text-secondary)] leading-relaxed pt-2 border-t border-[var(--border-hairline)]"
+                          >
+                            {secondaryContent.lessons.map((lesson, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <span className="font-bold opacity-70">•</span>
+                                <span>{lesson}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                     </div>
                   )}
 
-                  {hadith.contextStory && (
+                  {hadith.contextStory && primaryContent.contextStory && (
                     <div className="rounded-xl bg-[var(--accent-gold-soft)]/60 border border-[var(--border-hairline)] p-4 space-y-2">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#875C10] dark:text-[var(--accent-gold)]">
                         <SymbolicBabIcon
@@ -824,14 +888,27 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                         />
                         <span>
                           {t.hadithCard.contextStoryPrefix}
-                          {settings.language === 'tr' ? ` · ${hadith.contextStory.titleTr}` : ''}
+                          {primaryContent.contextStory.title
+                            ? ` · ${primaryContent.contextStory.title}`
+                            : ''}
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed">
-                        {settings.language === 'tr'
-                          ? hadith.contextStory.summaryTr
-                          : t.common.translationPreparing}
+                        {primaryContent.contextStory.summary}
                       </p>
+                      {hasSecondaryLang &&
+                        showSecondaryTranslation &&
+                        secondaryContent?.contextStory?.summary && (
+                          <p
+                            dir={secondaryLangMeta?.dir}
+                            className="text-xs text-[var(--text-secondary)] leading-relaxed pt-2 border-t border-[var(--border-hairline)]"
+                          >
+                            {secondaryContent.contextStory.title
+                              ? `${secondaryContent.contextStory.title}: `
+                              : ''}
+                            {secondaryContent.contextStory.summary}
+                          </p>
+                        )}
                     </div>
                   )}
                 </div>
@@ -880,7 +957,11 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                       <StatusBadge variant="needs_review" label={t.hadithCard.footnoteVerifyBadge} />
                     )}
                     {fn.tahricSources?.map((src) => (
-                      <StatusBadge key={src} variant="tahric" label={src} />
+                      <StatusBadge
+                        key={src}
+                        variant="tahric"
+                        label={localizeTahricBadge(src, settings.language)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -893,8 +974,19 @@ export const HadithCard: React.FC<HadithCardProps> = ({
                 </p>
 
                 <p className="text-xs sm:text-sm leading-relaxed text-[var(--text-secondary)] pt-2 border-t border-[var(--border-hairline)]">
-                  {settings.language === 'tr' ? fn.turkishSummary : t.common.translationPreparing}
+                  {primaryContent.getFootnoteSummary(fn.id, fn.turkishSummary)}
                 </p>
+                {hasSecondaryLang &&
+                  showSecondaryTranslation &&
+                  secondaryContent &&
+                  !secondaryContent.isTranslationMissing && (
+                    <p
+                      dir={secondaryLangMeta?.dir}
+                      className="text-xs leading-relaxed text-[var(--text-muted)] pt-1.5 border-t border-dashed border-[var(--border-hairline)]"
+                    >
+                      {secondaryContent.getFootnoteSummary(fn.id, fn.turkishSummary)}
+                    </p>
+                  )}
               </div>
             ))}
           </div>

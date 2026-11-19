@@ -1,12 +1,44 @@
 import hadislerRaw from '../data/hadisler.json';
 import kelimelerRaw from '../data/kelimeler.json';
+import fullWordLexiconRaw from '../data/fullWordLexicon.json';
 import ebuDavudRaw from '../data/ebu-davud.json';
 import sunenRaw from '../data/sunen.json';
 import { BABS } from '../data/babs';
 import { GLOSSARY_TERMS, extractNarratorDirectory } from '../data/glossaryData';
-import type { EbuDavudData, HadithItem, SunenData } from '../types';
+import type {
+  EbuDavudData,
+  FullWordLexiconEntry,
+  HadithItem,
+  LanguageCode,
+  SunenData,
+} from '../types';
 import { matchesArabicQuery } from './arabic';
 import { normalizeTransliterationSearch } from './localizedText';
+import {
+  formatPdfPage,
+  getLocalizedBab,
+  getLocalizedHadithContent,
+  type HadithLanguagePack,
+} from './hadithTranslations';
+import {
+  getLocalizedDerivativeMeaning,
+  getLocalizedGlossaryTerm,
+  getLocalizedIsnadNote,
+  getLocalizedIsnadUi,
+  getLocalizedNarratorLayer,
+  getLocalizedPartOfSpeech,
+  getLocalizedRootWordMorphology,
+  getLocalizedWordMeaning,
+  type GlossaryAndIsnadPack,
+  type WordLexiconPack,
+} from './lexiconTranslations';
+import {
+  getLocalizedEbuDavud,
+  getLocalizedEbuDavudUi,
+  getLocalizedSunen,
+  getLocalizedSunenUi,
+  type ArticleTranslationPack,
+} from './articleTranslations';
 
 export type SearchResultCategory =
   | 'all'
@@ -50,6 +82,7 @@ interface KelimelerRootItem {
 }
 
 const HADITHS = hadislerRaw as HadithItem[];
+const FULL_LEXICON = fullWordLexiconRaw as Record<string, FullWordLexiconEntry>;
 const EBU_DAVUD = ebuDavudRaw as EbuDavudData;
 const SUNEN = sunenRaw as SunenData;
 const ROOTS = (kelimelerRaw as { roots: KelimelerRootItem[] }).roots;
@@ -85,13 +118,38 @@ function includesQuery(text: string, q: string): boolean {
   return false;
 }
 
+export interface GlobalSearchLocaleOptions {
+  language?: LanguageCode;
+  hadithPack?: HadithLanguagePack | null;
+  secondaryHadithPack?: HadithLanguagePack | null;
+  glossaryPack?: GlossaryAndIsnadPack | null;
+  secondaryGlossaryPack?: GlossaryAndIsnadPack | null;
+  wordLexiconPack?: WordLexiconPack | null;
+  secondaryWordLexiconPack?: WordLexiconPack | null;
+  articlePack?: ArticleTranslationPack | null;
+  secondaryArticlePack?: ArticleTranslationPack | null;
+  missingFallback?: string;
+}
+
 export function runGlobalSearch(
   rawQuery: string,
   categoryFilter: SearchResultCategory = 'all',
-  limit = 80
+  limit = 80,
+  locale?: GlobalSearchLocaleOptions
 ): GlobalSearchResult[] {
   const q = rawQuery.trim();
   if (!q) return [];
+
+  const lang: LanguageCode = locale?.language ?? 'tr';
+  const pack = locale?.hadithPack ?? null;
+  const secondaryPack = locale?.secondaryHadithPack ?? null;
+  const glossaryPack = locale?.glossaryPack ?? null;
+  const secondaryGlossaryPack = locale?.secondaryGlossaryPack ?? null;
+  const wordPack = locale?.wordLexiconPack ?? null;
+  const secondaryWordPack = locale?.secondaryWordLexiconPack ?? null;
+  const articlePack = locale?.articlePack ?? null;
+  const secondaryArticlePack = locale?.secondaryArticlePack ?? null;
+  const missingFallback = locale?.missingFallback ?? '';
 
   const results: GlobalSearchResult[] = [];
   const allow = (cat: Exclude<SearchResultCategory, 'all'>) =>
@@ -100,7 +158,12 @@ export function runGlobalSearch(
   // 1. Babs (11)
   if (allow('bab')) {
     for (const bab of BABS) {
+      const locBab = getLocalizedBab(bab, lang, pack);
+      const secBab = secondaryPack?.babs[bab.id];
       if (
+        includesQuery(locBab.title, q) ||
+        includesQuery(locBab.subtitle, q) ||
+        (secBab && (includesQuery(secBab.title, q) || includesQuery(secBab.subtitle, q))) ||
         includesQuery(bab.titleTr, q) ||
         includesQuery(bab.titleFr, q) ||
         includesQuery(bab.titleAr, q) ||
@@ -110,11 +173,11 @@ export function runGlobalSearch(
         results.push({
           id: `bab-${bab.id}`,
           category: 'bab',
-          categoryLabel: 'Bab',
-          title: `${bab.numberLabel}: ${bab.titleTr}`,
+          categoryLabel: locBab.numberLabel,
+          title: `${locBab.numberLabel}: ${locBab.title}`,
           arabicSnippet: bab.titleAr,
-          snippet: bab.subtitleTr,
-          meta: `Hadis ${bab.hadithStart}–${bab.hadithEnd} · PDF s. ${bab.pdfPages}`,
+          snippet: locBab.subtitle,
+          meta: `#${bab.hadithStart}–${bab.hadithEnd} · ${formatPdfPage(bab.pdfPages, lang)}`,
           to: `/hadisler?bab=${bab.id}`,
         });
       }
@@ -124,10 +187,20 @@ export function runGlobalSearch(
   // 2. Hadiths (38)
   if (allow('hadith')) {
     for (const h of HADITHS) {
+      const locH = getLocalizedHadithContent(h, lang, pack, missingFallback);
+      const secEntry = secondaryPack?.hadiths[h.id];
       const idMatch = String(h.id) === q || `#${h.id}` === q;
       const hit =
         idMatch ||
         includesQuery(h.fullTextAr, q) ||
+        includesQuery(locH.translation, q) ||
+        locH.lessons.some((l) => includesQuery(l, q)) ||
+        (locH.contextStory &&
+          (includesQuery(locH.contextStory.title, q) ||
+            includesQuery(locH.contextStory.summary, q))) ||
+        (secEntry &&
+          (includesQuery(secEntry.translation, q) ||
+            secEntry.lessons.some((l) => includesQuery(l, q)))) ||
         includesQuery(h.translationTr, q) ||
         includesQuery(h.translationFr, q) ||
         h.lessonsTr.some((l) => includesQuery(l, q)) ||
@@ -135,48 +208,71 @@ export function runGlobalSearch(
 
       if (hit) {
         const bab = BABS.find((b) => b.id === h.babId);
+        const locBab = bab ? getLocalizedBab(bab, lang, pack) : null;
         results.push({
           id: `hadith-${h.id}`,
           category: 'hadith',
-          categoryLabel: 'Hadis',
-          title: `Hadis #${h.id} · ${bab ? `${bab.numberLabel}: ${bab.titleTr}` : ''}`,
+          categoryLabel: `#${h.id}`,
+          title: `#${h.id} · ${locBab ? `${locBab.numberLabel}: ${locBab.title}` : ''}`,
           arabicSnippet: h.matnAr,
-          snippet: h.translationTr,
-          meta: `PDF s. ${h.pdfPage} · ${h.tahricBadges.join(', ') || "Sünen-i Ebî Dâvûd"}`,
+          snippet: locH.translation,
+          meta: `${formatPdfPage(h.pdfPage, lang)} · ${h.tahricBadges.join(', ') || 'Sunan Abi Dawud'}`,
           to: `/hadisler?bab=${h.babId}&hadith=${h.id}`,
         });
       }
     }
   }
 
-  // 3. Words & Roots (107 roots / 125 words)
+  // 3. Words & Roots (275 roots / 423 words)
   if (allow('word')) {
     for (const rootEntry of ROOTS) {
       const rootHit =
         includesQuery(rootEntry.root, q) ||
         includesQuery(rootEntry.rootNormalized, q) ||
-        rootEntry.derivatives.some(
-          (d) => includesQuery(d.ar, q) || includesQuery(d.tr, q) || includesQuery(d.fr, q)
-        );
+        rootEntry.derivatives.some((d) => {
+          const locDeriv = getLocalizedDerivativeMeaning(d, lang, wordPack, '');
+          const secDeriv = secondaryWordPack?.derivatives[d.ar] ?? '';
+          return (
+            includesQuery(d.ar, q) ||
+            includesQuery(d.tr, q) ||
+            includesQuery(d.fr, q) ||
+            includesQuery(locDeriv, q) ||
+            includesQuery(secDeriv, q)
+          );
+        });
 
       for (const w of rootEntry.words) {
+        const locMeaning = getLocalizedWordMeaning(w, lang, wordPack, missingFallback || w.transliteration);
+        const secMeaning = secondaryWordPack?.meanings[w.meaningTr] ?? '';
         const wordHit =
           rootHit ||
           includesQuery(w.arabic, q) ||
           includesQuery(w.transliteration, q) ||
           includesQuery(w.meaningTr, q) ||
           includesQuery(w.meaningFr, q) ||
+          includesQuery(locMeaning, q) ||
+          includesQuery(secMeaning, q) ||
           includesQuery(w.morphology, q);
 
         if (wordHit) {
+          const locPos = getLocalizedPartOfSpeech(w.partOfSpeech, lang, wordPack);
+          const locMorph = getLocalizedRootWordMorphology(
+            w,
+            FULL_LEXICON,
+            lang,
+            wordPack,
+            missingFallback
+          );
+          const bab = BABS.find((b) => b.id === w.babId);
+          const locBab = bab ? getLocalizedBab(bab, lang, pack) : null;
           results.push({
             id: `word-${w.id}`,
             category: 'word',
-            categoryLabel: 'Kelime & Kök',
-            title: `${w.arabic} (${w.transliteration}) — ${w.meaningTr}`,
-            arabicSnippet: `Kök: ${rootEntry.root}`,
-            snippet: `${w.partOfSpeech} · ${w.morphology}`,
-            meta: `Hadis #${w.hadithId} · Bab ${w.babId}`,
+            categoryLabel: rootEntry.root,
+            title: `${w.arabic} (${w.transliteration}) — ${locMeaning}`,
+            arabicSnippet: rootEntry.root,
+            snippet: [locPos, locMorph].filter(Boolean).join(' · '),
+            meta: `#${w.hadithId} · ${locBab ? locBab.numberLabel : `Bab ${w.babId}`}`,
             to: `/hadisler?bab=${w.babId}&hadith=${w.hadithId}`,
           });
         }
@@ -187,9 +283,15 @@ export function runGlobalSearch(
   // 4. Footnotes / Hashiya
   if (allow('footnote')) {
     for (const h of HADITHS) {
+      const locH = getLocalizedHadithContent(h, lang, pack, missingFallback);
+      const secEntry = secondaryPack?.hadiths[h.id];
       for (const fn of h.footnotes) {
+        const locSummary = locH.getFootnoteSummary(fn.id, fn.turkishSummary);
+        const secSummary = secEntry?.footnotes[fn.id];
         const hit =
           includesQuery(fn.arabicText, q) ||
+          includesQuery(locSummary, q) ||
+          (secSummary ? includesQuery(secSummary, q) : false) ||
           includesQuery(fn.turkishSummary, q) ||
           (fn.tahricSources ?? []).some((s) => includesQuery(s, q));
 
@@ -197,11 +299,11 @@ export function runGlobalSearch(
           results.push({
             id: `fn-${h.id}-${fn.id}`,
             category: 'footnote',
-            categoryLabel: 'Haşiye / Dipnot',
-            title: `Hadis #${h.id} · Haşiye [${fn.marker}]`,
+            categoryLabel: `[${fn.marker}]`,
+            title: `#${h.id} · [${fn.marker}]`,
             arabicSnippet: fn.arabicText,
-            snippet: fn.turkishSummary,
-            meta: `PDF s. ${h.pdfPage}`,
+            snippet: locSummary,
+            meta: formatPdfPage(h.pdfPage, lang),
             to: `/hadisler?bab=${h.babId}&hadith=${h.id}`,
           });
         }
@@ -211,22 +313,32 @@ export function runGlobalSearch(
 
   // 5. Narrators (Sahabe / Tabiin / Etba / Musannif)
   if (allow('narrator')) {
+    const isnadUi = getLocalizedIsnadUi(lang, glossaryPack);
     for (const narrator of NARRATORS) {
+      const locNotes = narrator.notes.map((n) =>
+        getLocalizedIsnadNote(n, lang, glossaryPack, missingFallback)
+      );
+      const secNotes = secondaryGlossaryPack
+        ? narrator.notes.map((n) => secondaryGlossaryPack.isnadNotes[n] ?? '')
+        : [];
       const hit =
         includesQuery(narrator.nameTr, q) ||
         includesQuery(narrator.nameAr, q) ||
-        narrator.notes.some((n) => includesQuery(n, q));
+        narrator.notes.some((n) => includesQuery(n, q)) ||
+        locNotes.some((n) => includesQuery(n, q)) ||
+        secNotes.some((n) => includesQuery(n, q));
 
       if (hit) {
         const firstHadith = narrator.hadithIds[0];
+        const layerLabel = getLocalizedNarratorLayer(narrator.layer, lang, glossaryPack);
         results.push({
           id: `narrator-${narrator.key}`,
           category: 'narrator',
-          categoryLabel: 'Râvi',
-          title: narrator.nameTr,
-          arabicSnippet: narrator.nameAr,
-          snippet: narrator.notes[0] || `Kitâbü’l-Edeb rivayet zincirinde yer alır.`,
-          meta: `${narrator.hadithIds.length} hadiste geçer (#${narrator.hadithIds.join(', #')})`,
+          categoryLabel: layerLabel,
+          title: lang === 'ar' ? narrator.nameAr : narrator.nameTr,
+          arabicSnippet: lang === 'ar' ? undefined : narrator.nameAr,
+          snippet: locNotes[0] || layerLabel,
+          meta: `${narrator.hadithIds.length} ${isnadUi.otherHadithsUnit} (#${narrator.hadithIds.join(', #')})`,
           to: `/hadisler?hadith=${firstHadith}`,
         });
       }
@@ -235,122 +347,184 @@ export function runGlobalSearch(
 
   // 6. Ebu Davud TDV Encyclopedia
   if (allow('ebu_davud')) {
-    for (const city of EBU_DAVUD.cities) {
-      if (
-        includesQuery(city.nameTr, q) ||
-        includesQuery(city.nameAr, q) ||
-        includesQuery(city.detailsTr, q) ||
-        city.teachersOrEvents.some((t) => includesQuery(t, q))
-      ) {
-        results.push({
-          id: `ed-city-${city.id}`,
-          category: 'ebu_davud',
-          categoryLabel: 'Ebû Dâvûd',
-          title: `${city.order}. İlim Durağı: ${city.nameTr} (${city.yearText})`,
-          arabicSnippet: city.nameAr,
-          snippet: city.detailsTr,
-          meta: city.roleTr,
-          to: '/ebu-davud#harita',
-        });
-      }
-    }
+    const edData = getLocalizedEbuDavud(EBU_DAVUD, lang, articlePack);
+    const edUi = getLocalizedEbuDavudUi(lang, articlePack);
+    const secEd = secondaryArticlePack?.ebuDavud ?? null;
 
-    for (const work of EBU_DAVUD.works.mainWorks) {
-      if (
-        includesQuery(work.title, q) ||
-        includesQuery(work.summaryTr, q) ||
-        (work.altTitles ?? []).some((a) => includesQuery(a, q))
-      ) {
-        results.push({
-          id: `ed-work-${work.title}`,
-          category: 'ebu_davud',
-          categoryLabel: 'Ebû Dâvûd Eseri',
-          title: work.title,
-          snippet: work.summaryTr,
-          meta: 'Ebû Dâvûd’un Başlıca Eserleri',
-          to: '/ebu-davud#eserleri',
-        });
-      }
-    }
+    if (edData) {
+      edData.cities.forEach((city, idx) => {
+        const baseCity = EBU_DAVUD.cities[idx];
+        const secCity = secEd?.cities[idx];
+        if (
+          includesQuery(city.nameTr, q) ||
+          includesQuery(city.nameAr, q) ||
+          includesQuery(city.detailsTr, q) ||
+          includesQuery(city.roleTr, q) ||
+          city.teachersOrEvents.some((item) => includesQuery(item, q)) ||
+          (secCity &&
+            (includesQuery(secCity.nameTr, q) || includesQuery(secCity.detailsTr, q))) ||
+          (baseCity &&
+            (includesQuery(baseCity.nameTr, q) || includesQuery(baseCity.nameAr, q)))
+        ) {
+          results.push({
+            id: `ed-city-${city.id}`,
+            category: 'ebu_davud',
+            categoryLabel: edUi.searchLabels.cityCategory,
+            title: `${edUi.searchLabels.cityTitlePrefix} ${city.order}: ${city.nameTr} (${city.yearText})`,
+            arabicSnippet: lang === 'ar' ? undefined : city.nameAr,
+            snippet: city.detailsTr,
+            meta: city.roleTr,
+            to: '/ebu-davud#harita',
+          });
+        }
+      });
 
-    for (const node of EBU_DAVUD.network.nodes) {
-      if (
-        includesQuery(node.label, q) ||
-        includesQuery(node.nameAr ?? '', q) ||
-        includesQuery(node.detailTr, q) ||
-        includesQuery(node.roleTr, q)
-      ) {
-        results.push({
-          id: `ed-node-${node.id}`,
-          category: 'ebu_davud',
-          categoryLabel: 'Âlim / Hoca-Talebe',
-          title: node.label,
-          arabicSnippet: node.nameAr,
-          snippet: node.detailTr,
-          meta: `${node.roleTr}${node.city ? ` · ${node.city}` : ''}`,
-          to: '/ebu-davud#ag',
-        });
-      }
+      edData.works.mainWorks.forEach((work, idx) => {
+        const baseWork = EBU_DAVUD.works.mainWorks[idx];
+        const secWork = secEd?.works.mainWorks[idx];
+        if (
+          includesQuery(work.title, q) ||
+          includesQuery(work.summaryTr, q) ||
+          (work.altTitles ?? []).some((a) => includesQuery(a, q)) ||
+          (secWork &&
+            (includesQuery(secWork.title, q) || includesQuery(secWork.summaryTr, q))) ||
+          (baseWork &&
+            (includesQuery(baseWork.title, q) ||
+              (baseWork.altTitles ?? []).some((a) => includesQuery(a, q))))
+        ) {
+          results.push({
+            id: `ed-work-${work.order}`,
+            category: 'ebu_davud',
+            categoryLabel: edUi.searchLabels.workCategory,
+            title: work.title,
+            snippet: work.summaryTr,
+            meta: edUi.searchLabels.workMeta,
+            to: '/ebu-davud#eserleri',
+          });
+        }
+      });
+
+      edData.network.nodes.forEach((node, idx) => {
+        const baseNode = EBU_DAVUD.network.nodes[idx];
+        const secNode = secEd?.network.nodes[idx];
+        if (
+          includesQuery(node.label, q) ||
+          includesQuery(node.nameAr ?? '', q) ||
+          includesQuery(node.detailTr, q) ||
+          includesQuery(node.roleTr, q) ||
+          (secNode &&
+            (includesQuery(secNode.label, q) || includesQuery(secNode.detailTr, q))) ||
+          (baseNode &&
+            (includesQuery(baseNode.label, q) || includesQuery(baseNode.nameAr ?? '', q)))
+        ) {
+          results.push({
+            id: `ed-node-${node.id}`,
+            category: 'ebu_davud',
+            categoryLabel: edUi.searchLabels.nodeCategory,
+            title: node.label,
+            arabicSnippet: lang === 'ar' ? undefined : node.nameAr,
+            snippet: node.detailTr,
+            meta: `${node.roleTr}${node.city ? ` · ${node.city}` : ''}`,
+            to: '/ebu-davud#ag',
+          });
+        }
+      });
     }
   }
 
   // 7. es-Sunen TDV Encyclopedia
   if (allow('sunen')) {
-    for (const principle of SUNEN.compilationAndPurpose.mekkeLetter.principles) {
-      if (includesQuery(principle.titleTr, q) || includesQuery(principle.detailTr, q)) {
-        results.push({
-          id: `sunen-princ-${principle.order}`,
-          category: 'sunen',
-          categoryLabel: 'es-Sünen Metod',
-          title: `Mekke Mektubu ${principle.order}. İlke: ${principle.titleTr}`,
-          snippet: principle.detailTr,
-          meta: 'Risâletü Ebî Dâvûd ilâ ehli Mekke',
-          to: '/sunen#telif-metod',
-        });
-      }
-    }
+    const sunenData = getLocalizedSunen(SUNEN, lang, articlePack);
+    const sunenUi = getLocalizedSunenUi(lang, articlePack);
+    const secSunen = secondaryArticlePack?.sunen ?? null;
 
-    for (const comm of SUNEN.commentaries) {
-      if (
-        includesQuery(comm.title, q) ||
-        includesQuery(comm.author, q) ||
-        includesQuery(comm.summaryTr, q)
-      ) {
-        results.push({
-          id: `sunen-comm-${comm.id}`,
-          category: 'sunen',
-          categoryLabel: 'es-Sünen Şerhi',
-          title: `${comm.title} — ${comm.author}`,
-          snippet: comm.summaryTr,
-          meta: comm.madhhabOrScope,
-          to: '/sunen#serh-kitapligi',
-        });
-      }
-    }
+    if (sunenData) {
+      sunenData.compilationAndPurpose.mekkeLetter.principles.forEach((principle, idx) => {
+        const basePrinc = SUNEN.compilationAndPurpose.mekkeLetter.principles[idx];
+        const secPrinc = secSunen?.compilationAndPurpose.mekkeLetter.principles[idx];
+        if (
+          includesQuery(principle.titleTr, q) ||
+          includesQuery(principle.detailTr, q) ||
+          (secPrinc &&
+            (includesQuery(secPrinc.titleTr, q) || includesQuery(secPrinc.detailTr, q))) ||
+          (basePrinc && includesQuery(basePrinc.titleTr, q))
+        ) {
+          results.push({
+            id: `sunen-princ-${principle.order}`,
+            category: 'sunen',
+            categoryLabel: sunenUi.searchLabels.methodCategory,
+            title: `${sunenUi.searchLabels.principleTitlePrefix} ${principle.order}: ${principle.titleTr}`,
+            snippet: principle.detailTr,
+            meta: sunenUi.searchLabels.principleMeta,
+            to: '/sunen#telif-metod',
+          });
+        }
+      });
 
-    for (const study of SUNEN.abridgementsAndStudies) {
-      if (
-        includesQuery(study.title, q) ||
-        includesQuery(study.author, q) ||
-        includesQuery(study.summaryTr, q)
-      ) {
-        results.push({
-          id: `sunen-study-${study.id}`,
-          category: 'sunen',
-          categoryLabel: study.kindLabelTr,
-          title: `${study.title} — ${study.author}`,
-          snippet: study.summaryTr,
-          meta: study.publicationInfo,
-          to: '/sunen#serh-kitapligi',
-        });
-      }
+      sunenData.commentaries.forEach((comm, idx) => {
+        const baseComm = SUNEN.commentaries[idx];
+        const secComm = secSunen?.commentaries[idx];
+        if (
+          includesQuery(comm.title, q) ||
+          includesQuery(comm.author, q) ||
+          includesQuery(comm.summaryTr, q) ||
+          (secComm &&
+            (includesQuery(secComm.title, q) ||
+              includesQuery(secComm.author, q) ||
+              includesQuery(secComm.summaryTr, q))) ||
+          (baseComm &&
+            (includesQuery(baseComm.title, q) || includesQuery(baseComm.author, q)))
+        ) {
+          results.push({
+            id: `sunen-comm-${comm.id}`,
+            category: 'sunen',
+            categoryLabel: sunenUi.searchLabels.commentaryCategory,
+            title: `${comm.title} — ${comm.author}`,
+            snippet: comm.summaryTr,
+            meta: comm.madhhabOrScope,
+            to: '/sunen#serh-kitapligi',
+          });
+        }
+      });
+
+      sunenData.abridgementsAndStudies.forEach((study, idx) => {
+        const baseStudy = SUNEN.abridgementsAndStudies[idx];
+        const secStudy = secSunen?.abridgementsAndStudies[idx];
+        if (
+          includesQuery(study.title, q) ||
+          includesQuery(study.author, q) ||
+          includesQuery(study.summaryTr, q) ||
+          (secStudy &&
+            (includesQuery(secStudy.title, q) ||
+              includesQuery(secStudy.author, q) ||
+              includesQuery(secStudy.summaryTr, q))) ||
+          (baseStudy &&
+            (includesQuery(baseStudy.title, q) || includesQuery(baseStudy.author, q)))
+        ) {
+          results.push({
+            id: `sunen-study-${study.id}`,
+            category: 'sunen',
+            categoryLabel: study.kindLabelTr,
+            title: `${study.title} — ${study.author}`,
+            snippet: study.summaryTr,
+            meta: study.publicationInfo,
+            to: '/sunen#serh-kitapligi',
+          });
+        }
+      });
     }
   }
 
   // 8. Hadis Usulu Glossary
   if (allow('glossary')) {
     for (const term of GLOSSARY_TERMS) {
+      const loc = getLocalizedGlossaryTerm(term, lang, glossaryPack, missingFallback);
+      const sec = secondaryGlossaryPack?.terms[term.id];
       if (
+        includesQuery(loc.term, q) ||
+        includesQuery(loc.definition, q) ||
+        includesQuery(loc.exampleInApp, q) ||
+        (sec && (includesQuery(sec.term, q) || includesQuery(sec.definition, q))) ||
         includesQuery(term.termTr, q) ||
         includesQuery(term.termAr, q) ||
         includesQuery(term.termFr, q) ||
@@ -360,12 +534,12 @@ export function runGlobalSearch(
         results.push({
           id: `glossary-${term.id}`,
           category: 'glossary',
-          categoryLabel: 'Usûl Sözlüğü',
-          title: term.termTr,
-          arabicSnippet: term.termAr,
-          snippet: term.definitionTr,
-          meta: term.categoryLabelTr,
-          to: `/sozluk?q=${encodeURIComponent(term.termTr)}`,
+          categoryLabel: loc.categoryLabel || term.categoryLabelTr,
+          title: loc.term,
+          arabicSnippet: lang === 'ar' ? undefined : term.termAr,
+          snippet: loc.definition,
+          meta: loc.categoryLabel || formatPdfPage('1', lang),
+          to: `/sozluk?q=${encodeURIComponent(loc.term)}`,
         });
       }
     }

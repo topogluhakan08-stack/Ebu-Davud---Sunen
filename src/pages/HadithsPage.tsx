@@ -7,21 +7,37 @@ import type { HadithItem } from '../types';
 import { useApp } from '../context/AppContext';
 import { useSpeech, type SpeechLang } from '../hooks/useSpeech';
 import { filterHadiths, type HadithStatusFilter } from '../utils/hadithFilters';
-import { getBabDisplayTitle } from '../utils/localizedText';
+import {
+  formatPdfPage,
+  getLocalizedBab,
+  getLocalizedHadithContent,
+} from '../utils/hadithTranslations';
 import { ManuscriptCard } from '../components/ui/Card';
 import { SymbolicBabIcon } from '../components/icons/SymbolicIllustrations';
 import { HadithCard } from '../components/hadiths/HadithCard';
 
 const HADITHS = hadislerRaw as HadithItem[];
 
-const BAB_TITLE_FOOTNOTES: Record<number, string> = {
-  1: '* Bab başlığındaki “[ve güzel hâl / gidişat (وحسن الهدي)]” ziyadesi yalnızca (ك) nüshasının hâşiyesinde yer almaktadır.',
-  4: '* 4. Bab başlığı “[Öfke Anında Söylenecek Söz Babı]” yalnızca (ك) nüshasının hâşiyesinde bulunmaktadır.',
-  9: '* 9. Bab başlığı “[Yüksek Makam Hırsından Kaçınma Babı]” (ص) dışındaki tüm ana nüshalarda yer alır.',
+const BAB_TITLE_FOOTNOTES: Record<number, { tr: string; hadithId: number; fnId: string }> = {
+  1: {
+    tr: '* Bab başlığındaki “[ve güzel hâl / gidişat (وحسن الهدي)]” ziyadesi yalnızca (ك) nüshasının hâşiyesinde yer almaktadır.',
+    hadithId: 4740,
+    fnId: 'fn-4740-bab',
+  },
+  4: {
+    tr: '* 4. Bab başlığı “[Öfke Anında Söylenecek Söz Babı]” yalnızca (ك) nüshasının hâşiyesinde bulunmaktadır.',
+    hadithId: 4747,
+    fnId: 'fn-4747-bab',
+  },
+  9: {
+    tr: '* 9. Bab başlığı “[Yüksek Makam Hırsından Kaçınma Babı]” (ص) dışındaki tüm ana nüshalarda yer alır.',
+    hadithId: 4769,
+    fnId: 'fn-4769-bab',
+  },
 };
 
 export const HadithsPage: React.FC = () => {
-  const { settings, progress, markListened, t } = useApp();
+  const { settings, progress, markListened, t, hadithPack, secondaryHadithPack } = useApp();
   const { speak } = useSpeech();
   const [searchParams, setSearchParams] = useSearchParams();
   const isDark = settings.theme === 'dark';
@@ -80,11 +96,23 @@ export const HadithsPage: React.FC = () => {
         query,
         statusFilter,
         progress,
+        hadithPack,
+        secondaryHadithPack,
       }),
-    [selectedBab, query, statusFilter, progress]
+    [selectedBab, query, statusFilter, progress, hadithPack, secondaryHadithPack]
   );
 
   const activeBab = selectedBab === 'all' ? undefined : getBabById(selectedBab);
+  const localizedActiveBab = activeBab
+    ? getLocalizedBab(activeBab, settings.language, hadithPack)
+    : undefined;
+  const activeBabFootnote = activeBab ? BAB_TITLE_FOOTNOTES[activeBab.id] : undefined;
+  const activeBabFootnoteText = activeBabFootnote
+    ? settings.language === 'tr'
+      ? activeBabFootnote.tr
+      : hadithPack?.hadiths[activeBabFootnote.hadithId]?.footnotes[activeBabFootnote.fnId] ||
+        t.common.translationPreparing
+    : null;
 
   const handleAudioFinishedRef = useRef<((hadithId: number, lang: SpeechLang) => void) | null>(null);
 
@@ -97,11 +125,12 @@ export const HadithsPage: React.FC = () => {
       const nextText =
         lang === 'ar-SA'
           ? nextHadith.fullTextAr
-          : lang === 'fr-FR'
-            ? nextHadith.translationFr
-            : lang === 'tr-TR'
-              ? nextHadith.translationTr
-              : t.common.translationPreparing;
+          : getLocalizedHadithContent(
+              nextHadith,
+              settings.language,
+              hadithPack,
+              t.common.translationPreparing
+            ).translation;
 
       const el = document.getElementById(`hadith-${nextHadith.id}`);
       if (el) {
@@ -113,7 +142,7 @@ export const HadithsPage: React.FC = () => {
         onEnd: () => handleAudioFinishedRef.current?.(nextHadith.id, lang),
       });
     },
-    [autoPlayNext, filteredHadiths, markListened, speak]
+    [autoPlayNext, filteredHadiths, markListened, speak, settings.language, hadithPack, t.common.translationPreparing]
   );
 
   handleAudioFinishedRef.current = handleAudioFinished;
@@ -209,6 +238,7 @@ export const HadithsPage: React.FC = () => {
           {BABS.map((bab) => {
             const isSelected = selectedBab === bab.id;
             const accent = isDark ? bab.colorDarkHex : bab.colorHex;
+            const localizedBab = getLocalizedBab(bab, settings.language, hadithPack);
             const readInBab = HADITHS.filter(
               (h) => h.babId === bab.id && progress.readHadiths.includes(h.id)
             ).length;
@@ -237,7 +267,7 @@ export const HadithsPage: React.FC = () => {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <SymbolicBabIcon type={bab.iconType} color={accent} className="w-5 h-5 shrink-0" />
                     <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
-                      {bab.numberLabel}
+                      {localizedBab.numberLabel}
                     </span>
                   </div>
                   <span className="text-[11px] font-tabular text-[var(--text-muted)] shrink-0">
@@ -246,7 +276,7 @@ export const HadithsPage: React.FC = () => {
                 </div>
                 <div className="min-w-0 space-y-1">
                   <div className="text-xs font-bold text-[var(--text-primary)] leading-snug">
-                    {getBabDisplayTitle(bab, settings.language)}
+                    {localizedBab.title}
                   </div>
                   <div className="text-[11px] text-[var(--text-muted)] font-tabular">
                     {bab.hadithStart === bab.hadithEnd
@@ -285,25 +315,25 @@ export const HadithsPage: React.FC = () => {
               </div>
               <div className="space-y-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
-                  <span>{activeBab.numberLabel}</span>
+                  <span>{localizedActiveBab?.numberLabel}</span>
                   <span>·</span>
                   <span className="font-tabular">
                     {activeBab.hadithStart}–{activeBab.hadithEnd} ({activeBab.hadithCount} {t.hadithsPage.hadithUnit})
                   </span>
                   <span>·</span>
-                  <span className="font-tabular">PDF s. {activeBab.pdfPages}</span>
+                  <span className="font-tabular">
+                    {formatPdfPage(activeBab.pdfPages, settings.language)}
+                  </span>
                 </div>
                 <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-                  {getBabDisplayTitle(activeBab, settings.language)}
+                  {localizedActiveBab?.title}
                 </h2>
                 <p className="text-sm text-[var(--text-secondary)]">
-                  {settings.language === 'tr' ? activeBab.subtitleTr : t.common.translationPreparing}
+                  {localizedActiveBab?.subtitle}
                 </p>
-                {BAB_TITLE_FOOTNOTES[activeBab.id] && (
+                {activeBabFootnoteText && (
                   <p className="text-xs text-[var(--text-secondary)] pt-1">
-                    {settings.language === 'tr'
-                      ? BAB_TITLE_FOOTNOTES[activeBab.id]
-                      : t.common.translationPreparing}
+                    {activeBabFootnoteText}
                   </p>
                 )}
               </div>

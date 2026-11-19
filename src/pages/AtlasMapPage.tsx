@@ -6,22 +6,26 @@ import rawSunenData from '../data/sunen.json';
 import { BABS } from '../data/babs';
 import type { EbuDavudData, SunenData } from '../types';
 import { useApp } from '../context/AppContext';
-import { getBabDisplayTitle } from '../utils/localizedText';
+import { formatPdfPage, getLocalizedBab } from '../utils/hadithTranslations';
+import { getLocalizedEbuDavud, getLocalizedSunen } from '../utils/articleTranslations';
 import { TravelMap } from '../components/ebu-davud/TravelMap';
 import { EditionsMap } from '../components/sunen/EditionsMap';
 import { ManuscriptCard } from '../components/ui/Card';
 import { SymbolicBabIcon } from '../components/icons/SymbolicIllustrations';
 
-const EBU_DAVUD = rawEbuDavudData as EbuDavudData;
-const SUNEN = rawSunenData as SunenData;
+const EBU_DAVUD_TR = rawEbuDavudData as EbuDavudData;
+const SUNEN_TR = rawSunenData as SunenData;
 
 type AtlasView = 'journey' | 'editions' | 'overview';
 
 export const AtlasMapPage: React.FC = () => {
-  const { settings, t } = useApp();
+  const { settings, t, hadithPack, articlePack } = useApp();
   const isDark = settings.theme === 'dark';
   const [activeView, setActiveView] = useState<AtlasView>('journey');
   const [activeCityId, setActiveCityId] = useState<string>('sicistan');
+
+  const ebuDavud = getLocalizedEbuDavud(EBU_DAVUD_TR, settings.language, articlePack);
+  const sunen = getLocalizedSunen(SUNEN_TR, settings.language, articlePack);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -92,11 +96,17 @@ export const AtlasMapPage: React.FC = () => {
 
       {activeView === 'journey' && (
         <section aria-label={t.atlasPage.tabJourney} className="space-y-4">
-          <TravelMap
-            cities={EBU_DAVUD.cities}
-            activeCityId={activeCityId}
-            onSelectCity={setActiveCityId}
-          />
+          {ebuDavud ? (
+            <TravelMap
+              cities={ebuDavud.cities}
+              activeCityId={activeCityId}
+              onSelectCity={setActiveCityId}
+            />
+          ) : (
+            <ManuscriptCard className="p-8 text-center text-sm text-[var(--text-secondary)]">
+              {t.common.loading}
+            </ManuscriptCard>
+          )}
           <div className="flex justify-end">
             <Link
               to="/ebu-davud"
@@ -111,7 +121,13 @@ export const AtlasMapPage: React.FC = () => {
 
       {activeView === 'editions' && (
         <section aria-label={t.atlasPage.tabEditions} className="space-y-4">
-          <EditionsMap cities={SUNEN.printCities} />
+          {sunen ? (
+            <EditionsMap cities={sunen.printCities} />
+          ) : (
+            <ManuscriptCard className="p-8 text-center text-sm text-[var(--text-secondary)]">
+              {t.common.loading}
+            </ManuscriptCard>
+          )}
           <div className="flex justify-end">
             <Link
               to="/sunen"
@@ -192,6 +208,7 @@ export const AtlasMapPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {BABS.map((bab) => {
                 const accent = isDark ? bab.colorDarkHex : bab.colorHex;
+                const localizedBab = getLocalizedBab(bab, settings.language, hadithPack);
                 return (
                   <Link
                     key={bab.id}
@@ -202,10 +219,10 @@ export const AtlasMapPage: React.FC = () => {
                       <SymbolicBabIcon type={bab.iconType} color={accent} className="w-5 h-5 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-[var(--text-primary)] truncate">
-                          {bab.numberLabel}: {getBabDisplayTitle(bab, settings.language)}
+                          {localizedBab.numberLabel}: {localizedBab.title}
                         </p>
                         <p className="text-[11px] text-[var(--text-muted)] font-tabular">
-                          {bab.hadithStart}–{bab.hadithEnd} · PDF s. {bab.pdfPages}
+                          {bab.hadithStart}–{bab.hadithEnd} · {formatPdfPage(bab.pdfPages, settings.language)}
                         </p>
                       </div>
                     </div>

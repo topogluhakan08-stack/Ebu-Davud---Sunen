@@ -11,13 +11,21 @@ import {
 } from 'lucide-react';
 import hadislerRaw from '../data/hadisler.json';
 import kelimelerRaw from '../data/kelimeler.json';
+import fullWordLexiconRaw from '../data/fullWordLexicon.json';
 import { BABS } from '../data/babs';
 import { getQuestionBankStats } from '../data/questionBank';
-import type { HadithItem } from '../types';
+import type { FullWordLexiconEntry, HadithItem, LanguageCode } from '../types';
 import { useApp } from '../context/AppContext';
 import { useSpeech } from '../hooks/useSpeech';
 import { matchesArabicQuery, ROOT_HIGHLIGHT_PALETTE } from '../utils/arabic';
-import { getBabDisplayTitle } from '../utils/localizedText';
+import { getLanguageMeta } from '../utils/localizedText';
+import { getLocalizedBab } from '../utils/hadithTranslations';
+import {
+  getLocalizedDerivativeMeaning,
+  getLocalizedPartOfSpeech,
+  getLocalizedRootWordMorphology,
+  getLocalizedWordMeaning,
+} from '../utils/lexiconTranslations';
 import {
   createInitialGamificationState,
   getLevelForXp,
@@ -28,6 +36,11 @@ import {
   type GamificationState,
   type SrsProgressMap,
 } from '../utils/learnEngine';
+import {
+  buildLocalizedQuestionBank,
+  getLocalizedLearnUi,
+} from '../utils/learnTranslations';
+import { formatLocaleNumber } from '../utils/articleTranslations';
 import { ManuscriptCard } from '../components/ui/Card';
 import { KitabMindMap } from '../components/mindmap/KitabMindMap';
 import { QuizArena } from '../components/learn/QuizArena';
@@ -35,6 +48,7 @@ import { FlashcardDeck } from '../components/learn/FlashcardDeck';
 import { MasteryDashboard } from '../components/learn/MasteryDashboard';
 
 const HADITHS = hadislerRaw as HadithItem[];
+const FULL_LEXICON = fullWordLexiconRaw as Record<string, FullWordLexiconEntry>;
 
 interface KelimelerRootItem {
   id: string;
@@ -61,10 +75,26 @@ const ROOTS = (kelimelerRaw as { roots: KelimelerRootItem[] }).roots;
 type LearnTab = 'quiz' | 'flashcards' | 'roots' | 'mindmap' | 'mastery';
 
 export const LearnPage: React.FC = () => {
-  const { settings, progress, t } = useApp();
+  const {
+    settings,
+    progress,
+    t,
+    secondaryT,
+    hadithPack,
+    glossaryPack,
+    wordLexiconPack,
+    secondaryWordLexiconPack,
+    articlePack,
+    learnPack,
+  } = useApp();
   const { speak } = useSpeech();
   const [searchParams, setSearchParams] = useSearchParams();
   const isDark = settings.theme === 'dark';
+  const hasSecondaryLang =
+    settings.secondaryLanguage !== 'none' && settings.secondaryLanguage !== settings.language;
+  const secondaryLangMeta = hasSecondaryLang
+    ? getLanguageMeta(settings.secondaryLanguage as LanguageCode)
+    : null;
 
   const initialTab = (searchParams.get('tab') as LearnTab) || 'quiz';
   const [activeTab, setActiveTab] = useState<LearnTab>(
@@ -85,7 +115,36 @@ export const LearnPage: React.FC = () => {
   const [rootBab, setRootBab] = useState<number | 'all'>('all');
 
   const bankStats = useMemo(() => getQuestionBankStats(), []);
+  const learnUi = getLocalizedLearnUi(settings.language, learnPack).learnPage;
   const levelInfo = getLevelForXp(gamification.xp);
+
+  const localizedQuestionBank = useMemo(
+    () =>
+      buildLocalizedQuestionBank(settings.language, {
+        hadithPack,
+        wordLexiconPack,
+        glossaryPack,
+        articlePack,
+        learnPack,
+        fallbackText: t.common.translationPreparing,
+      }),
+    [
+      settings.language,
+      hadithPack,
+      wordLexiconPack,
+      glossaryPack,
+      articlePack,
+      learnPack,
+      t.common.translationPreparing,
+    ]
+  );
+
+  const isBankLoading = settings.language !== 'tr' && localizedQuestionBank.length === 0;
+
+  const totalWordCardCount = useMemo(
+    () => HADITHS.reduce((sum, h) => sum + h.words.length, 0),
+    []
+  );
 
   const dueCount = useMemo(() => {
     const now = Date.now();
@@ -110,7 +169,7 @@ export const LearnPage: React.FC = () => {
     switchTab('quiz');
   };
 
-  // Filtered Roots
+  // Filtered Roots (5-language search across meanings & derivatives)
   const filteredRoots = useMemo(() => {
     const q = rootQuery.trim();
     return ROOTS.filter((r) => {
@@ -121,25 +180,51 @@ export const LearnPage: React.FC = () => {
         r.root.includes(q) ||
         r.rootNormalized.includes(q) ||
         matchesArabicQuery(r.root, q) ||
-        r.words.some(
-          (w) =>
+        r.words.some((w) => {
+          const locMeaning = getLocalizedWordMeaning(w, settings.language, wordLexiconPack, '');
+          const secMeaning =
+            hasSecondaryLang && secondaryLangMeta
+              ? getLocalizedWordMeaning(w, secondaryLangMeta.code, secondaryWordLexiconPack, '')
+              : '';
+          return (
             matchesArabicQuery(w.arabic, q) ||
+            matchesArabicQuery(locMeaning, q) ||
             w.transliteration.toLocaleLowerCase('tr').includes(lowerQ) ||
             w.meaningTr.toLocaleLowerCase('tr').includes(lowerQ) ||
-            w.meaningFr.toLocaleLowerCase('tr').includes(lowerQ)
-        ) ||
-        r.derivatives.some(
-          (d) =>
+            w.meaningFr.toLocaleLowerCase('tr').includes(lowerQ) ||
+            locMeaning.toLocaleLowerCase('tr').includes(lowerQ) ||
+            secMeaning.toLocaleLowerCase('tr').includes(lowerQ)
+          );
+        }) ||
+        r.derivatives.some((d) => {
+          const locDeriv = getLocalizedDerivativeMeaning(d, settings.language, wordLexiconPack, '');
+          const secDeriv =
+            hasSecondaryLang && secondaryLangMeta
+              ? getLocalizedDerivativeMeaning(d, secondaryLangMeta.code, secondaryWordLexiconPack, '')
+              : '';
+          return (
             matchesArabicQuery(d.ar, q) ||
+            matchesArabicQuery(locDeriv, q) ||
             d.tr.toLocaleLowerCase('tr').includes(lowerQ) ||
-            d.fr.toLocaleLowerCase('tr').includes(lowerQ)
-        )
+            d.fr.toLocaleLowerCase('tr').includes(lowerQ) ||
+            locDeriv.toLocaleLowerCase('tr').includes(lowerQ) ||
+            secDeriv.toLocaleLowerCase('tr').includes(lowerQ)
+          );
+        })
       ) {
         return true;
       }
       return false;
     });
-  }, [rootQuery, rootBab]);
+  }, [
+    rootQuery,
+    rootBab,
+    settings.language,
+    wordLexiconPack,
+    hasSecondaryLang,
+    secondaryLangMeta,
+    secondaryWordLexiconPack,
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -161,17 +246,17 @@ export const LearnPage: React.FC = () => {
           <div className="grid grid-cols-3 gap-2.5 shrink-0">
             <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-hairline)] px-3.5 py-2.5 text-center">
               <div className="text-lg font-bold font-tabular text-[var(--accent-gold)]">
-                {gamification.xp} XP
+                {formatLocaleNumber(gamification.xp, settings.language)} {learnUi.xpUnit}
               </div>
               <div className="text-[11px] text-[var(--text-muted)]">
-                Lv.{levelInfo.current.level}
+                {learnUi.levelShort} {levelInfo.current.level}
               </div>
             </div>
             <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-hairline)] px-3.5 py-2.5 text-center">
               <div className="text-lg font-bold font-tabular text-[var(--accent-emerald)]">
                 {dueCount}
               </div>
-              <div className="text-[11px] text-[var(--text-muted)]">SRS</div>
+              <div className="text-[11px] text-[var(--text-muted)]">{learnUi.srsStatLabel}</div>
             </div>
             <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-hairline)] px-3.5 py-2.5 text-center">
               <div className="text-lg font-bold font-tabular text-[var(--accent-navy)] dark:text-[#93b8f9]">
@@ -185,17 +270,17 @@ export const LearnPage: React.FC = () => {
         {/* 5 Learning Mode Tabs */}
         <div
           role="tablist"
-          aria-label={t.learnPage.title}
+          aria-label={learnUi.tabsAria}
           className="flex sm:flex-wrap gap-1.5 sm:gap-2 overflow-x-auto rounded-2xl bg-[var(--bg-surface)] p-1.5 border border-[var(--border-hairline)]"
         >
           {[
-            { id: 'quiz' as const, label: `Quiz (${bankStats.total})`, icon: GraduationCap },
-            { id: 'flashcards' as const, label: 'SRS 3D', icon: Layers },
-            { id: 'roots' as const, label: `${t.hadithCard.rootLabel} (${ROOTS.length})`, icon: Network },
-            { id: 'mindmap' as const, label: t.mindMap.title, icon: GitBranch },
+            { id: 'quiz' as const, label: `${learnUi.tabs.quiz} (${bankStats.total})`, icon: GraduationCap },
+            { id: 'flashcards' as const, label: learnUi.tabs.flashcards, icon: Layers },
+            { id: 'roots' as const, label: `${learnUi.tabs.roots} (${ROOTS.length})`, icon: Network },
+            { id: 'mindmap' as const, label: learnUi.tabs.mindmap, icon: GitBranch },
             {
               id: 'mastery' as const,
-              label: `${t.progress.title} (${gamification.mistakeIds.length})`,
+              label: `${learnUi.tabs.mastery} (${gamification.mistakeIds.length})`,
               icon: BarChart3,
             },
           ].map((tab) => {
@@ -223,13 +308,19 @@ export const LearnPage: React.FC = () => {
       </header>
 
       {/* TAB 1: 9-MODE INTERACTIVE QUIZ ARENA */}
-      {activeTab === 'quiz' && (
-        <QuizArena
-          gamification={gamification}
-          onGamificationChange={handleGamificationChange}
-          externalMistakesOnlyTrigger={mistakesTrigger}
-        />
-      )}
+      {activeTab === 'quiz' &&
+        (isBankLoading ? (
+          <ManuscriptCard className="p-8 text-center text-sm text-[var(--text-muted)]">
+            {learnUi.loadingBank}
+          </ManuscriptCard>
+        ) : (
+          <QuizArena
+            gamification={gamification}
+            onGamificationChange={handleGamificationChange}
+            externalMistakesOnlyTrigger={mistakesTrigger}
+            questionBank={localizedQuestionBank}
+          />
+        ))}
 
       {/* TAB 2: 3D FLIP & SWIPE SPACED REPETITION FLASHCARDS */}
       {activeTab === 'flashcards' && (
@@ -267,11 +358,14 @@ export const LearnPage: React.FC = () => {
               <option value="all">
                 {t.hadithsPage.allBabsLabel} ({ROOTS.length})
               </option>
-              {BABS.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.numberLabel}: {getBabDisplayTitle(b, settings.language)}
-                </option>
-              ))}
+              {BABS.map((b) => {
+                const loc = getLocalizedBab(b, settings.language, hadithPack);
+                return (
+                  <option key={b.id} value={b.id}>
+                    {loc.numberLabel}: {loc.title}
+                  </option>
+                );
+              })}
             </select>
           </ManuscriptCard>
 
@@ -313,63 +407,103 @@ export const LearnPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    {rootItem.words.map((w) => (
-                      <div
-                        key={w.id}
-                        className="rounded-xl bg-[var(--bg-surface)]/75 border border-[var(--border-hairline)] p-3 flex items-start justify-between gap-3"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-arabic-inline text-lg font-bold text-[var(--text-primary)]">
-                              {w.arabic}
-                            </span>
-                            <span className="text-xs text-[var(--text-secondary)]">
-                              [{w.transliteration}]
-                            </span>
-                            <span className="text-[11px] text-[var(--text-muted)]">
-                              · {w.partOfSpeech}
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
-                            {settings.language === 'tr'
-                              ? w.meaningTr
-                              : settings.language === 'fr'
-                                ? w.meaningFr
-                                : t.common.translationPreparing}
-                          </p>
-                          <p className="text-[11px] text-[var(--text-muted)]">{w.morphology}</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => speak(w.arabic, 'ar-SA', { id: `root-${w.id}` })}
-                          aria-label={t.hadithCard.buttons.listenWord}
-                          className="min-h-[34px] min-w-[34px] rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] flex items-center justify-center text-[var(--accent-navy)] dark:text-[#93b8f9] shrink-0 cursor-pointer"
+                    {rootItem.words.map((w) => {
+                      const locPos = getLocalizedPartOfSpeech(
+                        w.partOfSpeech,
+                        settings.language,
+                        wordLexiconPack
+                      );
+                      const primaryMeaning = getLocalizedWordMeaning(
+                        w,
+                        settings.language,
+                        wordLexiconPack,
+                        t.common.translationPreparing
+                      );
+                      const secondaryMeaning =
+                        hasSecondaryLang && secondaryLangMeta
+                          ? getLocalizedWordMeaning(
+                              w,
+                              secondaryLangMeta.code,
+                              secondaryWordLexiconPack,
+                              secondaryT?.common.translationPreparing || t.common.translationPreparing
+                            )
+                          : null;
+                      const locMorph = getLocalizedRootWordMorphology(
+                        w,
+                        FULL_LEXICON,
+                        settings.language,
+                        wordLexiconPack,
+                        t.common.translationPreparing
+                      );
+
+                      return (
+                        <div
+                          key={w.id}
+                          className="rounded-xl bg-[var(--bg-surface)]/75 border border-[var(--border-hairline)] p-3 flex items-start justify-between gap-3"
                         >
-                          <Volume2 className="w-4 h-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-arabic-inline text-lg font-bold text-[var(--text-primary)]">
+                                {w.arabic}
+                              </span>
+                              <span className="text-xs text-[var(--text-secondary)]">
+                                [{w.transliteration}]
+                              </span>
+                              {locPos && (
+                                <span className="text-[11px] text-[var(--text-muted)]">
+                                  · {locPos}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs sm:text-sm font-medium text-[var(--text-primary)]">
+                              {primaryMeaning}
+                            </p>
+                            {secondaryMeaning && (
+                              <p
+                                dir={secondaryLangMeta?.dir}
+                                className="text-[11px] text-[var(--text-secondary)]"
+                              >
+                                {secondaryLangMeta?.shortLabel}: {secondaryMeaning}
+                              </p>
+                            )}
+                            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                              {locMorph}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => speak(w.arabic, 'ar-SA', { id: `root-${w.id}` })}
+                            aria-label={t.hadithCard.buttons.listenWord}
+                            className="min-h-[34px] min-w-[34px] rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] flex items-center justify-center text-[var(--accent-navy)] dark:text-[#93b8f9] shrink-0 cursor-pointer"
+                          >
+                            <Volume2 className="w-4 h-4" aria-hidden="true" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {rootItem.derivatives.length > 0 && (
                     <div className="pt-2 border-t border-[var(--border-hairline)] flex flex-wrap gap-1.5">
-                      {rootItem.derivatives.slice(0, 6).map((d) => (
-                        <span
-                          key={d.ar}
-                          className="rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2 py-0.5 text-xs text-[var(--text-secondary)] inline-flex items-center gap-1.5"
-                        >
-                          <span className="font-arabic-inline font-semibold text-[var(--text-primary)]">
-                            {d.ar}
+                      {rootItem.derivatives.slice(0, 6).map((d) => {
+                        const derivPrimary = getLocalizedDerivativeMeaning(
+                          d,
+                          settings.language,
+                          wordLexiconPack,
+                          t.common.translationPreparing
+                        );
+                        return (
+                          <span
+                            key={d.ar}
+                            className="rounded-lg bg-[var(--bg-surface)] border border-[var(--border-hairline)] px-2 py-0.5 text-xs text-[var(--text-secondary)] inline-flex items-center gap-1.5"
+                          >
+                            <span className="font-arabic-inline font-semibold text-[var(--text-primary)]">
+                              {d.ar}
+                            </span>
+                            <span>{derivPrimary}</span>
                           </span>
-                          <span>
-                            {settings.language === 'tr'
-                              ? d.tr
-                              : settings.language === 'fr'
-                                ? d.fr
-                                : t.common.translationPreparing}
-                          </span>
-                        </span>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </ManuscriptCard>
@@ -386,6 +520,9 @@ export const LearnPage: React.FC = () => {
       {activeTab === 'mastery' && (
         <MasteryDashboard
           gamification={gamification}
+          srsMap={srsMap}
+          totalSrsCards={totalWordCardCount}
+          questionBank={localizedQuestionBank}
           onStartMistakePractice={handleStartMistakePractice}
           onResetGamification={() => {
             const fresh = createInitialGamificationState();

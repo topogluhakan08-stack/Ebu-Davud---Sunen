@@ -19,6 +19,15 @@ import hadislerRaw from '../../data/hadisler.json';
 import { useApp } from '../../context/AppContext';
 import type { HadithItem, IsnadNode, IsnadTreeNode } from '../../types';
 import { buildIsnadTree, findHadithsByNarrator } from '../../utils/isnadTree';
+import {
+  formatTabakaLabel,
+  getLocalizedBranchLabel,
+  getLocalizedCautionReason,
+  getLocalizedIsnadUi,
+  getLocalizedNarratorBio,
+  getLocalizedNarratorDisplayName,
+  getLocalizedNarratorLayer,
+} from '../../utils/lexiconTranslations';
 
 const ALL_HADITHS = hadislerRaw as HadithItem[];
 
@@ -108,9 +117,10 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
   highlightedChainNodeId = null,
   onJumpToHadith,
 }) => {
-  const { settings } = useApp();
+  const { settings, t, glossaryPack } = useApp();
   const navigate = useNavigate();
   const isDark = settings.theme === 'dark';
+  const ui = getLocalizedIsnadUi(settings.language, glossaryPack);
 
   const [direction, setDirection] = useState<'prophet_to_musannif' | 'musannif_to_prophet'>(
     'prophet_to_musannif'
@@ -183,7 +193,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
         visualRow,
         tabakaNumber: visualRow + 1,
         layer,
-        label: LAYER_COLORS[layer].label,
+        label: getLocalizedNarratorLayer(layer, settings.language, glossaryPack),
         yTop,
         height: rowHeight,
       };
@@ -196,7 +206,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
       positions,
       rowBands,
     };
-  }, [tree.nodes, direction]);
+  }, [tree.nodes, direction, settings.language, glossaryPack]);
 
   // Attach d3-zoom for smooth drag, wheel & mobile pinch-zoom
   useEffect(() => {
@@ -248,17 +258,17 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
         <div className="flex items-center gap-2 min-w-0">
           <Users className="w-4 h-4 text-[var(--accent-navy)] dark:text-[#93b8f9] shrink-0" aria-hidden="true" />
           <span className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] truncate">
-            Klasik İsnad Ağacı · {tree.nodes.length} Râvî Düğümü
+            {ui.treeTitle} · {tree.nodes.length} {ui.narratorNodeUnit}
           </span>
           {tree.hasBranching && (
             <span className="rounded-md px-2 py-0.5 text-[11px] font-medium bg-[var(--accent-navy-soft)] text-[var(--accent-navy)] dark:text-[#93b8f9]">
-              Çoklu Tarîk
+              {ui.multiTarikBadge}
             </span>
           )}
           {tree.hasCaution && (
             <span className="rounded-md px-2 py-0.5 text-[11px] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300 inline-flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-              İsnad Notu
+              {ui.cautionBadge}
             </span>
           )}
         </div>
@@ -276,15 +286,15 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
             <ArrowUpDown className="w-3.5 h-3.5" aria-hidden="true" />
             <span>
               {direction === 'prophet_to_musannif'
-                ? 'Hz. Peygamber’den Ebû Dâvûd’a'
-                : 'Ebû Dâvûd’dan Kaynağa'}
+                ? ui.dirProphetToMusannif
+                : ui.dirMusannifToProphet}
             </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleZoomBy(1.18)}
-            aria-label="İsnad şemasını yakınlaştır"
+            aria-label={ui.zoomInAria}
             className="min-h-[34px] min-w-[34px] p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center justify-center cursor-pointer"
           >
             <ZoomIn className="w-4 h-4" aria-hidden="true" />
@@ -292,7 +302,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
           <button
             type="button"
             onClick={() => handleZoomBy(0.84)}
-            aria-label="İsnad şemasını uzaklaştır"
+            aria-label={ui.zoomOutAria}
             className="min-h-[34px] min-w-[34px] p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center justify-center cursor-pointer"
           >
             <ZoomOut className="w-4 h-4" aria-hidden="true" />
@@ -300,7 +310,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
           <button
             type="button"
             onClick={handleResetZoom}
-            aria-label="İsnad şeması yakınlaştırmasını sıfırla"
+            aria-label={ui.resetZoomAria}
             className="min-h-[34px] min-w-[34px] p-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center justify-center cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" aria-hidden="true" />
@@ -314,12 +324,12 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
             {isFullscreen ? (
               <>
                 <Minimize2 className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Küçült</span>
+                <span>{ui.collapseBtn}</span>
               </>
             ) : (
               <>
                 <Expand className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Tam Ekran Aç</span>
+                <span>{ui.fullscreenBtn}</span>
               </>
             )}
           </button>
@@ -337,7 +347,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
           viewBox={`0 0 ${layout.canvasWidth} ${layout.canvasHeight}`}
           className="w-full h-full cursor-grab active:cursor-grabbing"
           role="img"
-          aria-label={`Hadis ${hadithId || ''} klasik dikey isnad ağacı şeması`}
+          aria-label={`#${hadithId || ''} ${ui.treeTitle}`}
         >
           <defs>
             <marker
@@ -405,7 +415,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
                     fontWeight="700"
                     fill={isDark ? lc.textDark : lc.textLight}
                   >
-                    {band.tabakaNumber}. Tabaka
+                    {formatTabakaLabel(band.tabakaNumber, settings.language, ui.tabakaSuffix)}
                   </text>
                   <text
                     x={14}
@@ -531,7 +541,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
                   onClick={() => setSelectedNodeId(isSelected ? null : node.id)}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${node.nameTr} (${lc.label}) ayrıntılarını göster`}
+                  aria-label={`${getLocalizedNarratorDisplayName(node, settings.language)} (${getLocalizedNarratorLayer(node.layer, settings.language, glossaryPack)})`}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -565,12 +575,12 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
                   {node.branchLabel && (
                     <g transform={`translate(${pos.w / 2 - 26}, ${-pos.h / 2})`}>
                       <rect
-                        x={-22}
+                        x={-26}
                         y={-9}
-                        width={44}
+                        width={52}
                         height={16}
                         rx={8}
-                        fill={isDark ? '#1D4E89' : '#1D4E89'}
+                        fill="#1D4E89"
                       />
                       <text
                         x={0}
@@ -580,7 +590,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
                         fontWeight="700"
                         fill="#FFFFFF"
                       >
-                        {node.branchLabel}
+                        {getLocalizedBranchLabel(node.branchLabel, settings.language, glossaryPack)}
                       </text>
                     </g>
                   )}
@@ -603,25 +613,30 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
 
                   <text
                     x={0}
-                    y={-5}
+                    y={settings.language === 'ar' ? 5 : -5}
                     textAnchor="middle"
-                    fontSize={isProphet ? '14.5' : '13'}
+                    fontSize={isProphet ? '14.5' : settings.language === 'ar' ? '14' : '13'}
                     fontWeight="700"
                     className="font-arabic-inline"
                     fill={isDark ? lc.textDark : lc.textLight}
                   >
                     {node.nameAr.length > 34 ? `${node.nameAr.slice(0, 32)}…` : node.nameAr}
                   </text>
-                  <text
-                    x={0}
-                    y={15}
-                    textAnchor="middle"
-                    fontSize="11"
-                    fontWeight="600"
-                    fill={isDark ? '#E7E5E4' : '#292524'}
-                  >
-                    {node.nameTr.length > 32 ? `${node.nameTr.slice(0, 30)}…` : node.nameTr}
-                  </text>
+                  {settings.language !== 'ar' && (() => {
+                    const displayName = getLocalizedNarratorDisplayName(node, settings.language);
+                    return (
+                      <text
+                        x={0}
+                        y={15}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fontWeight="600"
+                        fill={isDark ? '#E7E5E4' : '#292524'}
+                      >
+                        {displayName.length > 32 ? `${displayName.slice(0, 30)}…` : displayName}
+                      </text>
+                    );
+                  })()}
                 </g>
               );
             })}
@@ -630,7 +645,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
 
         <div className="pointer-events-none absolute bottom-2.5 left-3 right-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)]">
           <span className="rounded-lg bg-[var(--bg-card)]/90 px-2.5 py-1 border border-[var(--border-hairline)]">
-            Sürükleyin · Yakınlaştırın · Ayrıntı için bir râvîye tıklayın
+            {ui.dragHint}
           </span>
         </div>
       </div>
@@ -642,51 +657,58 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-lg px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-[var(--bg-card)] border border-[var(--border-hairline)] text-[var(--accent-navy)] dark:text-[#93b8f9]">
-                  {selectedNode.layer === 'prophet'
-                    ? 'Kaynak · Nübüvvet'
-                    : LAYER_COLORS[selectedNode.layer].label}
+                  {getLocalizedNarratorLayer(selectedNode.layer, settings.language, glossaryPack)}
                 </span>
                 {selectedNode.isUncertain && selectedNode.uncertainReason && (
                   <span className="rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-800 dark:text-amber-300 inline-flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-                    {selectedNode.uncertainReason}
+                    {getLocalizedCautionReason(
+                      selectedNode.uncertainReason,
+                      settings.language,
+                      glossaryPack
+                    )}
                   </span>
                 )}
               </div>
               <div className="flex flex-wrap items-baseline gap-2.5 pt-0.5">
                 <h4 className="text-base font-bold text-[var(--text-primary)]">
-                  {selectedNode.nameTr}
+                  {getLocalizedNarratorDisplayName(selectedNode, settings.language)}
                 </h4>
-                <span className="font-arabic-inline text-lg font-bold text-[var(--accent-navy)] dark:text-[#93b8f9]">
-                  {selectedNode.nameAr}
-                </span>
+                {settings.language !== 'ar' && (
+                  <span className="font-arabic-inline text-lg font-bold text-[var(--accent-navy)] dark:text-[#93b8f9]">
+                    {selectedNode.nameAr}
+                  </span>
+                )}
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => setSelectedNodeId(null)}
-              aria-label="Râvî detayını kapat"
+              aria-label={ui.closeNarratorAria}
               className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[var(--bg-card)] border border-[var(--border-hairline)] text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] inline-flex items-center gap-1 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Kapat</span>
+              <span>{ui.closeBtn}</span>
             </button>
           </div>
 
           <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-hairline)] p-3 text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-            <span className="font-semibold text-[var(--text-primary)]">Kimdir (PDF Kayıtları): </span>
-            {selectedNode.bioTr}
+            <span className="font-semibold text-[var(--text-primary)]">{ui.whoIsLabel} </span>
+            {getLocalizedNarratorBio(
+              selectedNode.bioTr,
+              settings.language,
+              glossaryPack,
+              t.common.translationPreparing
+            )}
           </div>
 
           <div className="space-y-1.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              Bu râvî başka hangi hadislerde geçiyor? ({otherHadiths.length} hadis)
+              {ui.otherHadithsPrefix} ({otherHadiths.length} {ui.otherHadithsUnit})
             </p>
             {otherHadiths.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">
-                Seçili 38 hadislik bölümde bu râvînin geçtiği başka bir rivayet bulunmuyor.
-              </p>
+              <p className="text-xs text-[var(--text-muted)]">{ui.noOtherHadiths}</p>
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                 {otherHadiths.slice(0, 18).map((ref) => (
@@ -702,7 +724,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
                 ))}
                 {otherHadiths.length > 18 && (
                   <span className="text-xs text-[var(--text-muted)] self-center px-1">
-                    +{otherHadiths.length - 18} hadis daha
+                    +{otherHadiths.length - 18} {ui.moreHadithsSuffix}
                   </span>
                 )}
               </div>
@@ -718,7 +740,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
       <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-hairline)] p-4">
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
           <BookOpenCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span>Arapça Tam İsnad Metni</span>
+          <span>{ui.fullArabicIsnadHeader}</span>
         </div>
         <p className="font-arabic text-lg sm:text-xl leading-loose text-[var(--text-primary)]" dir="rtl">
           {isnadAr}
@@ -730,7 +752,7 @@ export const IsnadFlowChart: React.FC<IsnadFlowChartProps> = ({
           className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm p-2 sm:p-6 flex flex-col"
           role="dialog"
           aria-modal="true"
-          aria-label="Tam ekran isnad ağacı"
+          aria-label={ui.fullscreenDialogAria}
         >
           <div className="w-full h-full max-w-6xl mx-auto">{renderDiagramSurface()}</div>
         </div>

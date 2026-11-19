@@ -1,210 +1,234 @@
-import React, { useState } from 'react';
-import { CheckCircle2, MapPin, XCircle } from 'lucide-react';
+import React, { useMemo } from 'react';
 import ebuDavudRaw from '../../data/ebu-davud.json';
-import type { EbuDavudData } from '../../types';
 import { useApp } from '../../context/AppContext';
+import type { EbuDavudData } from '../../types';
+import { getLocalizedEbuDavud } from '../../utils/articleTranslations';
+import { getLocalizedLearnUi } from '../../utils/learnTranslations';
 
-const CITIES = (ebuDavudRaw as EbuDavudData).cities;
+const EBU_DAVUD_TR = ebuDavudRaw as EbuDavudData;
 
 interface CityMapQuestionProps {
   targetCityId: string;
-  answeredCityId: string | null;
-  onSelectCity: (cityId: string) => void;
+  selectedCityId: string | null;
+  revealed: boolean;
+  onSelect: (cityId: string) => void;
 }
 
-// Equirectangular projection bounds covering Mısır (31E) -> Belh (67E) & Mekke (21N) -> Harran/Tarsus (37N)
-const MIN_LNG = 28;
-const MAX_LNG = 70;
+const MIN_LNG = 29.5;
+const MAX_LNG = 68.5;
 const MIN_LAT = 19.5;
-const MAX_LAT = 38.8;
-
-const SVG_W = 680;
-const SVG_H = 340;
+const MAX_LAT = 38.5;
+const W = 680;
+const H = 310;
 
 function project(lat: number, lng: number): { x: number; y: number } {
-  const padX = 44;
-  const padY = 34;
-  const x = padX + ((lng - MIN_LNG) / (MAX_LNG - MIN_LNG)) * (SVG_W - padX * 2);
-  const y = padY + ((MAX_LAT - lat) / (MAX_LAT - MIN_LAT)) * (SVG_H - padY * 2);
+  const x = ((lng - MIN_LNG) / (MAX_LNG - MIN_LNG)) * (W - 70) + 35;
+  const y = H - (((lat - MIN_LAT) / (MAX_LAT - MIN_LAT)) * (H - 64) + 32);
   return { x, y };
 }
 
+const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor?: 'start' | 'middle' | 'end' }> = {
+  sijistan: { dx: 0, dy: 18, anchor: 'middle' },
+  baghdad: { dx: 12, dy: -6, anchor: 'start' },
+  basra: { dx: 12, dy: 12, anchor: 'start' },
+  mecca: { dx: 12, dy: 4, anchor: 'start' },
+  kufa: { dx: -12, dy: 4, anchor: 'end' },
+  homs: { dx: 10, dy: -10, anchor: 'start' },
+  damascus: { dx: 12, dy: 6, anchor: 'start' },
+  harran: { dx: 0, dy: -12, anchor: 'middle' },
+  khurasan: { dx: 0, dy: -12, anchor: 'middle' },
+  balkh: { dx: 0, dy: -12, anchor: 'middle' },
+  rayy: { dx: 0, dy: -12, anchor: 'middle' },
+  egypt: { dx: -8, dy: 18, anchor: 'middle' },
+  tarsus: { dx: -10, dy: -10, anchor: 'end' },
+  herat: { dx: 8, dy: 16, anchor: 'start' },
+};
+
 export const CityMapQuestion: React.FC<CityMapQuestionProps> = ({
   targetCityId,
-  answeredCityId,
-  onSelectCity,
+  selectedCityId,
+  revealed,
+  onSelect,
 }) => {
-  const { settings } = useApp();
-  const isDark = settings.theme === 'dark';
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const hasAnswered = answeredCityId !== null;
+  const { settings, articlePack, learnPack } = useApp();
+  const lang = settings.language;
+  const ui = getLocalizedLearnUi(lang, learnPack).cityMap;
+
+  const cities = useMemo(() => {
+    const loc = getLocalizedEbuDavud(EBU_DAVUD_TR, lang, articlePack);
+    return loc ? loc.cities : EBU_DAVUD_TR.cities;
+  }, [lang, articlePack]);
+
+  const points = useMemo(
+    () =>
+      cities.map((c) => ({
+        ...c,
+        ...project(c.lat, c.lng),
+      })),
+    [cities]
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] overflow-hidden">
-        <div className="px-3.5 py-2 border-b border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)]">
-          <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--text-primary)]">
-            <MapPin className="w-3.5 h-3.5 text-[var(--accent-gold)]" aria-hidden="true" />
-            <span>14 Tarihî İlim Merkezi Haritası (Mısır — Hicaz — Şam — Irak — Horasan)</span>
-          </span>
-          <span>Haritadan bir şehir pinine veya aşağıdaki şehir butonuna tıklayın</span>
-        </div>
+    <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] overflow-hidden">
+      <div className="px-3.5 py-2 border-b border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-muted)]">
+        <span className="font-semibold text-[var(--text-primary)]">{ui.headerBadge}</span>
+        <span>
+          {revealed
+            ? `✓ ${cities.find((c) => c.id === targetCityId)?.nameTr || targetCityId}`
+            : ui.legendHint}
+        </span>
+      </div>
 
+      <div className="w-full overflow-x-auto bg-[#EFE8DA] dark:bg-[#171C23]" dir="ltr">
         <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-          className="w-full h-auto block select-none"
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full min-w-[520px] h-auto block select-none"
           role="img"
-          aria-label="Ebû Dâvûd’un seyahat ettiği 14 şehir haritası"
+          aria-label={ui.svgAria}
         >
-          <rect
-            x={0}
-            y={0}
-            width={SVG_W}
-            height={SVG_H}
-            fill={isDark ? '#121925' : '#F4EFE4'}
-          />
+          <defs>
+            <linearGradient id="mapSeaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="var(--bg-surface)" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="var(--bg-card)" stopOpacity="0.9" />
+            </linearGradient>
+          </defs>
+          <rect x="0" y="0" width={W} height={H} fill="url(#mapSeaGrad)" />
 
-          {/* Subtle historical land & sea horizon silhouettes (abstract geometric contours) */}
-          <path
-            d="M 0 115 Q 95 100 135 128 T 185 170 L 145 250 Q 170 295 225 340 L 0 340 Z"
-            fill={isDark ? 'rgba(59, 103, 176, 0.14)' : 'rgba(29, 78, 137, 0.08)'}
-          />
-          <path
-            d="M 190 215 L 250 325 L 330 335 L 365 265 L 270 195 Z"
-            fill={isDark ? 'rgba(184, 134, 45, 0.08)' : 'rgba(184, 134, 45, 0.1)'}
-          />
-          {/* Subtle coordinate grid */}
-          {[85, 170, 255].map((y) => (
+          {/* Subtle latitude/longitude graticule */}
+          {[70, 145, 220].map((y) => (
             <line
-              key={y}
-              x1={0}
+              key={`lat-${y}`}
+              x1={16}
               y1={y}
-              x2={SVG_W}
+              x2={W - 16}
               y2={y}
-              stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(28,25,23,0.06)'}
-              strokeDasharray="4 4"
+              stroke="var(--border-hairline)"
+              strokeDasharray="3 5"
+              strokeWidth={1}
             />
           ))}
-          {[136, 272, 408, 544].map((x) => (
+          {[140, 290, 440, 590].map((x) => (
             <line
-              key={x}
+              key={`lng-${x}`}
               x1={x}
-              y1={0}
+              y1={16}
               x2={x}
-              y2={SVG_H}
-              stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(28,25,23,0.06)'}
-              strokeDasharray="4 4"
+              y2={H - 16}
+              stroke="var(--border-hairline)"
+              strokeDasharray="3 5"
+              strokeWidth={1}
             />
           ))}
 
-          {/* Regional water/region subtle labels */}
-          <text x={34} y={62} fontSize="10" fill={isDark ? '#64748B' : '#948C7E'} fontWeight="600">
-            AKDENİZ & ANADOLU
+          {/* Stylized historical regions (soft non-figurative shapes) */}
+          <path
+            d="M 42 54 Q 160 36 300 62 T 580 76 L 642 150 Q 590 230 480 218 T 275 235 L 180 286 L 78 242 Z"
+            fill="var(--bg-card)"
+            fillOpacity="0.72"
+            stroke="var(--border-hairline)"
+            strokeWidth={1.2}
+          />
+
+          {/* Region Labels */}
+          <text x={85} y={40} fontSize={10} fill="var(--text-muted)" opacity={0.75}>
+            {ui.regionMedAnatolia}
           </text>
-          <text x={240} y={295} fontSize="10" fill={isDark ? '#64748B' : '#948C7E'} fontWeight="600">
-            HİCAZ
+          <text x={198} y={288} fontSize={10} fill="var(--text-muted)" opacity={0.75}>
+            {ui.regionHijaz}
           </text>
-          <text x={505} y={255} fontSize="10" fill={isDark ? '#64748B' : '#948C7E'} fontWeight="600">
-            SİCİSTAN & HORASAN
+          <text x={505} y={248} fontSize={10} fill="var(--text-muted)" opacity={0.75}>
+            {ui.regionSijistan}
           </text>
 
-          {/* Subtle travel route polyline connecting cities by order */}
+          {/* Subtle route connections along his life journey */}
           <polyline
             fill="none"
-            stroke={isDark ? 'rgba(217, 173, 91, 0.25)' : 'rgba(184, 134, 45, 0.28)'}
-            strokeWidth={1.3}
-            strokeDasharray="4 3"
-            points={CITIES.map((c) => {
-              const p = project(c.lat, c.lng);
-              return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
-            }).join(' ')}
+            stroke="var(--accent-gold)"
+            strokeOpacity={0.35}
+            strokeWidth={1.5}
+            strokeDasharray="4 4"
+            points={points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
           />
 
-          {/* 14 City Pins */}
-          {CITIES.map((city) => {
-            const { x, y } = project(city.lat, city.lng);
+          {/* 14 Interactive City Nodes */}
+          {points.map((city) => {
             const isTarget = city.id === targetCityId;
-            const isChosen = city.id === answeredCityId;
-            const isHovered = city.id === hoveredId;
+            const isSelected = city.id === selectedCityId;
+            const off = LABEL_OFFSETS[city.id] || { dx: 0, dy: -12, anchor: 'middle' };
 
-            let fill = isDark ? '#3B67B0' : '#14284B';
-            let stroke = isDark ? '#D9AD5B' : '#FBF9F4';
-            let r = isHovered ? 9.5 : 7.5;
+            let fill = 'var(--accent-navy)';
+            let ring = 'none';
+            let radius = 7;
 
-            if (hasAnswered) {
+            if (revealed) {
               if (isTarget) {
-                fill = '#0F5132';
-                stroke = '#34D399';
-                r = 10.5;
-              } else if (isChosen) {
-                fill = '#8C3B4A';
-                stroke = '#F472B6';
-                r = 9.5;
+                fill = '#2E6B5E';
+                ring = '#2E6B5E';
+                radius = 10;
+              } else if (isSelected && !isTarget) {
+                fill = '#A03848';
+                ring = '#A03848';
+                radius = 9;
               } else {
-                fill = isDark ? '#334155' : '#A8A29E';
+                fill = 'var(--text-muted)';
+                radius = 5.5;
               }
+            } else if (isSelected) {
+              fill = 'var(--accent-gold)';
+              radius = 9;
             }
 
-            // Slight label offsets to keep Iraq / Levant clusters legible
-            const labelDy =
-              city.id === 'harran' || city.id === 'halep'
-                ? -13
-                : city.id === 'humus'
-                  ? 16
-                  : city.id === 'kufe'
-                    ? 16
-                    : city.id === 'bagdat'
-                      ? -13
-                      : -12;
+            const displayLabel = lang === 'ar' ? city.nameAr : city.nameTr;
 
             return (
               <g
                 key={city.id}
-                transform={`translate(${x}, ${y})`}
-                onClick={() => !hasAnswered && onSelectCity(city.id)}
-                onMouseEnter={() => setHoveredId(city.id)}
-                onMouseLeave={() => setHoveredId((prev) => (prev === city.id ? null : prev))}
-                role="button"
-                tabIndex={hasAnswered ? -1 : 0}
-                aria-label={`${city.nameTr} (${city.nameAr}) şehrini seç`}
+                transform={`translate(${city.x}, ${city.y})`}
+                onClick={() => {
+                  if (!revealed) onSelect(city.id);
+                }}
                 onKeyDown={(e) => {
-                  if (!hasAnswered && (e.key === 'Enter' || e.key === ' ')) {
+                  if (!revealed && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault();
-                    onSelectCity(city.id);
+                    onSelect(city.id);
                   }
                 }}
-                className={hasAnswered ? 'cursor-default' : 'cursor-pointer focus:outline-none'}
+                role="button"
+                tabIndex={revealed ? -1 : 0}
+                aria-label={displayLabel}
+                style={{ cursor: revealed ? 'default' : 'pointer' }}
               >
-                <circle cx={0} cy={0} r={14} fill="transparent" />
+                <circle r={16} fill="transparent" />
+                {ring !== 'none' && (
+                  <circle
+                    r={radius + 6}
+                    fill={ring}
+                    fillOpacity={0.18}
+                    stroke={ring}
+                    strokeWidth={1.5}
+                  />
+                )}
                 <circle
-                  cx={0}
-                  cy={0}
-                  r={r}
+                  r={radius}
                   fill={fill}
-                  stroke={stroke}
+                  stroke="var(--bg-card)"
                   strokeWidth={2}
                 />
                 <text
-                  x={0}
-                  y={labelDy}
-                  textAnchor="middle"
-                  fontSize="10.5"
-                  fontWeight={isTarget && hasAnswered ? '700' : '600'}
+                  x={off.dx}
+                  y={off.dy}
+                  textAnchor={off.anchor || 'middle'}
+                  fontSize={isTarget && revealed ? 11.5 : 10.5}
+                  fontWeight={isTarget && revealed ? 700 : 600}
                   fill={
-                    hasAnswered && isTarget
-                      ? isDark
-                        ? '#6EE7B7'
-                        : '#0F5132'
-                      : hasAnswered && isChosen
-                        ? isDark
-                          ? '#F9A8D4'
-                          : '#8C3B4A'
-                        : isDark
-                          ? '#EFEAE0'
-                          : '#1C1917'
+                    revealed && isTarget
+                      ? '#2E6B5E'
+                      : revealed && isSelected
+                        ? '#A03848'
+                        : 'var(--text-primary)'
                   }
                 >
-                  {city.nameTr}
+                  {displayLabel}
                 </text>
               </g>
             );
@@ -212,41 +236,20 @@ export const CityMapQuestion: React.FC<CityMapQuestionProps> = ({
         </svg>
       </div>
 
-      {/* Touch & Keyboard City Grid (14 cities) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5">
-        {CITIES.map((city) => {
-          const isTarget = city.id === targetCityId;
-          const isChosen = city.id === answeredCityId;
-          let cls =
-            'bg-[var(--bg-surface)] border-[var(--border-hairline)] text-[var(--text-primary)] hover:border-[var(--accent-navy)]';
-          if (hasAnswered) {
-            if (isTarget) {
-              cls =
-                'bg-[#E6F2EC] dark:bg-[#132E22] border-[#0F5132] dark:border-[#34D399] text-[#0F5132] dark:text-[#6EE7B7] font-bold';
-            } else if (isChosen) {
-              cls =
-                'bg-[#F7EAED] dark:bg-[#361921] border-[#8C3B4A] dark:border-[#F472B6] text-[#8C3B4A] dark:text-[#F9A8D4]';
-            } else {
-              cls = 'bg-[var(--bg-surface)]/50 border-[var(--border-hairline)] text-[var(--text-muted)]';
-            }
-          }
-          return (
-            <button
-              key={city.id}
-              type="button"
-              disabled={hasAnswered}
-              onClick={() => onSelectCity(city.id)}
-              className={`min-h-[38px] px-2 py-1.5 rounded-xl border text-xs font-medium inline-flex items-center justify-center gap-1 transition-colors cursor-pointer disabled:cursor-default ${cls}`}
-            >
-              <span className="truncate">{city.nameTr}</span>
-              {hasAnswered && isTarget && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
-              {hasAnswered && isChosen && !isTarget && (
-                <XCircle className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {revealed && (
+        <div className="px-3.5 py-2 border-t border-[var(--border-hairline)] flex flex-wrap items-center gap-4 text-[11px] text-[var(--text-muted)]">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#2E6B5E]" />
+            {ui.legendCorrect}
+          </span>
+          {selectedCityId && selectedCityId !== targetCityId && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#A03848]" />
+              {ui.legendWrong}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

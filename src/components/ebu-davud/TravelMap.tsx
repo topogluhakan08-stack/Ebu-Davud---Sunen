@@ -9,6 +9,8 @@ import { Button } from '../ui/Button';
 import { StatusBadge } from '../ui/Badge';
 import { SpeechControls } from '../tts/SpeechControls';
 
+import { getLocalizedEbuDavudUi } from '../../utils/articleTranslations';
+
 interface TravelMapProps {
   cities: ScholarCity[];
   activeCityId?: string | null;
@@ -20,8 +22,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   activeCityId,
   onSelectCity,
 }) => {
-  const { settings } = useApp();
+  const { settings, articlePack } = useApp();
   const isDark = settings.theme === 'dark';
+  const ui = getLocalizedEbuDavudUi(settings.language, articlePack).travelMap;
+  const popupDir = settings.language === 'ar' ? 'rtl' : 'ltr';
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -90,7 +94,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       const marker = L.marker([city.lat, city.lng], { icon })
         .addTo(map)
         .bindPopup(
-          `<div style="min-width:170px;font-family:sans-serif;">
+          `<div dir="${popupDir}" style="min-width:170px;font-family:sans-serif;">
             <strong style="font-size:14px;">${city.order}. ${city.nameTr}</strong><br/>
             <span style="font-size:12px;color:#57534e;">${city.yearText}</span><br/>
             <span style="font-size:12px;">${city.roleTr}</span>
@@ -113,9 +117,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       mapRef.current = null;
       markersRef.current = {};
     };
-  }, [sortedCities]);
+  }, []);
 
-  // Highlight active marker & pan smoothly
+  // Highlight active marker, refresh localized popups & pan smoothly
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !selectedCity) return;
@@ -135,6 +139,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           iconAnchor: [14, 14],
         })
       );
+      marker.setPopupContent(
+        `<div dir="${popupDir}" style="min-width:170px;font-family:sans-serif;">
+          <strong style="font-size:14px;">${city.order}. ${city.nameTr}</strong><br/>
+          <span style="font-size:12px;color:#57534e;">${city.yearText}</span><br/>
+          <span style="font-size:12px;">${city.roleTr}</span>
+        </div>`
+      );
     });
 
     if (settings.reducedMotion) {
@@ -144,7 +155,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     } else {
       map.panTo([selectedCity.lat, selectedCity.lng], { animate: true, duration: 0.6 });
     }
-  }, [selectedCity, sortedCities, isDark, settings.reducedMotion]);
+  }, [selectedCity, sortedCities, isDark, settings.reducedMotion, popupDir]);
 
   // Play journey animation across all 14 stops
   useEffect(() => {
@@ -173,6 +184,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
   };
 
+  const selectedNarration = selectedCity
+    ? `${selectedCity.nameTr}. ${selectedCity.yearText}. ${selectedCity.detailsTr}`
+    : '';
+
   return (
     <div className="space-y-5">
       {/* Controls & City Index Pills */}
@@ -184,7 +199,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             onClick={() => setIsPlaying((prev) => !prev)}
             iconLeft={isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           >
-            {isPlaying ? 'Yolculuğu Duraklat' : 'Yolculuğu Oynat (14 Şehir)'}
+            {isPlaying ? ui.pauseJourney : ui.playJourney}
           </Button>
           <Button
             variant="outline"
@@ -192,11 +207,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             onClick={handleResetView}
             iconLeft={<RotateCcw className="w-4 h-4" />}
           >
-            Haritayı Sıfırla
+            {ui.resetMap}
           </Button>
         </div>
 
-        <StatusBadge variant="extra" label="Ek açıklama · Koordinatlar coğrafî konum içindir" />
+        <StatusBadge variant="extra" label={ui.coordBadge} />
       </div>
 
       {/* Map + Selected City Inspector (balanced 12-col split) */}
@@ -205,7 +220,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           <div
             ref={mapContainerRef}
             className="w-full h-[380px] lg:h-full lg:min-h-[460px]"
-            aria-label="Ebû Dâvûd'un 14 şehirlik ilim yolculuğu haritası"
+            aria-label={ui.mapAria}
           />
         </div>
 
@@ -218,15 +233,20 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-tabular text-[var(--text-secondary)]">
-                    Durak {selectedCity.order} / {sortedCities.length} · {selectedCity.region}
+                    {ui.stopLabel} {selectedCity.order} / {sortedCities.length} · {selectedCity.region}
                   </p>
                   <h3 className="text-2xl font-bold text-[var(--text-primary)] mt-1">
                     {selectedCity.nameTr}
                   </h3>
                 </div>
-                <span className="font-arabic-inline text-2xl font-bold text-[var(--accent-navy)] dark:text-[var(--accent-gold)]" dir="rtl">
-                  {selectedCity.nameAr}
-                </span>
+                {settings.language !== 'ar' && (
+                  <span
+                    className="font-arabic-inline text-2xl font-bold text-[var(--accent-navy)] dark:text-[var(--accent-gold)]"
+                    dir="rtl"
+                  >
+                    {selectedCity.nameAr}
+                  </span>
+                )}
               </div>
 
               <div className="text-xs font-tabular text-[var(--accent-emerald)] font-medium">
@@ -239,7 +259,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
               <div className="space-y-2 pt-2 border-t border-[var(--border-hairline)]">
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
-                  Bu Şehirdeki Hocalar &amp; Hadiseler
+                  {ui.teachersEventsHeading}
                 </p>
                 <ul className="space-y-1.5">
                   {selectedCity.teachersOrEvents.map((ev) => (
@@ -256,7 +276,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               <SpeechControls
                 id={`city-${selectedCity.id}`}
                 compact
-                turkishText={`${selectedCity.nameTr}. ${selectedCity.yearText}. ${selectedCity.detailsTr}`}
+                arabicText={settings.language === 'ar' ? selectedNarration : undefined}
+                primaryText={settings.language === 'ar' ? undefined : selectedNarration}
               />
             </div>
           </ManuscriptCard>
@@ -275,7 +296,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
                 setIsPlaying(false);
                 handleSelect(city.id);
               }}
-              className={`min-h-[44px] px-2.5 py-2 rounded-xl border text-left transition-colors cursor-pointer ${
+              className={`min-h-[44px] px-2.5 py-2 rounded-xl border text-start transition-colors cursor-pointer ${
                 active
                   ? 'bg-[var(--accent-navy)] text-white border-[var(--accent-navy)]'
                   : 'bg-[var(--bg-card)] text-[var(--text-primary)] border-[var(--border-hairline)] hover:bg-[var(--bg-surface)]'
